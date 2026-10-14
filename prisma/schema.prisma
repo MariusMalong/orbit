@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String            @id @default(cuid())
+  email          String            @unique
+  passwordHash   String
+  tasks          Task[]
+  projects       Project[]
+  commitments    FixedCommitment[]
+  schedules      Schedule[]
+  availabilities Availability[]
+  createdAt      DateTime          @default(now())
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  color     String?
+  tasks     Task[]
+  createdAt DateTime @default(now())
+}
+
+model Task {
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId        String?
+  project          Project?        @relation(fields: [projectId], references: [id])
+  
+  title            String
+  description      String?
+  priority         Int
+  durationEstimate Int             // In minutes
+  deadline         DateTime?
+  status           TaskStatus      @default(TODO)
+  
+  scheduleBlocks   ScheduleBlock[]
+  timeEntries      TimeEntry[]
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  COMPLETED
+  BUMPED
+}
+
+model FixedCommitment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  startTime DateTime
+  endTime   DateTime
+}
+
+model Availability {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek Int      // 0 = Sun, 1 = Mon, etc.
+  startTime String   // "HH:MM"
+  endTime   String   // "HH:MM"
+}
+
+model Schedule {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  isDraft   Boolean         @default(true)
+  blocks    ScheduleBlock[]
+  createdAt DateTime        @default(now())
+}
+
+model ScheduleBlock {
+  id         String   @id @default(cuid())
+  scheduleId String
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  startTime  DateTime
+  endTime    DateTime
+}
+
+model TimeEntry {
+  id        String    @id @default(cuid())
+  taskId    String
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  startTime DateTime
+  endTime   DateTime?
+  duration  Int?
+}
