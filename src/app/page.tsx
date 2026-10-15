@@ -1,6 +1,7 @@
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { TaskForm } from '@/components/task-form';
+import { deleteTask } from '@/app/actions/task';
 
 export default async function Home() {
   const session = await auth();
@@ -50,15 +51,27 @@ export default async function Home() {
           ) : (
             <ul className="flex flex-col gap-3">
               {tasks.map((task) => (
-                <li key={task.id} className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900 p-4">
+                <li key={task.id} className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900 p-4 transition hover:border-slate-700">
                   <div className="flex flex-col">
                     <span className="font-medium text-white">{task.title}</span>
                     <span className="text-sm text-slate-400">{task.durationEstimate} minutes</span>
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-4">
                     <span className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs font-medium text-slate-300">
                       Priority {task.priority}
                     </span>
+
+                    <form action={deleteTask}>
+                      <input type="hidden" name="taskId" value={task.id} />
+                      <button
+                        type="submit"
+                        className="text-sm font-medium text-slate-500 transition hover:text-red-400"
+                        title="Delete task"
+                      >
+                        Delete
+                      </button>
+                    </form>
                   </div>
                 </li>
               ))}
