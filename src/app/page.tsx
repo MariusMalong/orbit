@@ -1,7 +1,7 @@
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { TaskForm } from '@/components/task-form';
-import { deleteTask } from '@/app/actions/task';
+import { deleteTask, completeTask } from '@/app/actions/task';
 
 export default async function Home() {
   const session = await auth();
@@ -23,7 +23,10 @@ export default async function Home() {
 
   // Fetch tasks for the currently logged-in user
   const tasks = await prisma.task.findMany({
-    where: { userId: session.user.id },
+    where: { 
+      userId: session.user.id,
+      status: 'TODO' // Only fetch active tasks
+    },
     orderBy: { createdAt: 'desc' },
   });
 
@@ -62,6 +65,17 @@ export default async function Home() {
                       Priority {task.priority}
                     </span>
 
+                    <form action={completeTask}>
+                      <input type="hidden" name="taskId" value={task.id} />
+                      <button
+                        type="submit"
+                        className="text-sm font-medium text-emerald-500 transition hover:text-emerald-400"
+                        title="Mark as completed"
+                      >
+                        Complete
+                      </button>
+                    </form>
+
                     <form action={deleteTask}>
                       <input type="hidden" name="taskId" value={task.id} />
                       <button
@@ -72,6 +86,7 @@ export default async function Home() {
                         Delete
                       </button>
                     </form>
+                    
                   </div>
                 </li>
               ))}

@@ -51,3 +51,28 @@ export async function deleteTask(formData: FormData) {
   // 4. Refresh the dashboard
   revalidatePath('/');
 }
+
+export async function completeTask(formData: FormData) {
+  // 1. Verify identity
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('You must be logged in to update a task.');
+  }
+
+  // 2. Extract Task ID
+  const taskId = formData.get('taskId') as string;
+
+  // 3. Securely update the task status
+  await prisma.task.updateMany({
+    where: {
+      id: taskId,
+      userId: session.user.id,
+    },
+    data: {
+      status: 'COMPLETED'
+    },
+  })
+
+  // 4. Refresh the dashboard
+  revalidatePath('/');
+}
