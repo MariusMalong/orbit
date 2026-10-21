@@ -85,12 +85,56 @@ export function generateSchedule(
 
     const scheduledBlocks: ScheduleBlockResult[] = [];
     const bumpedTaskIds: string[] = [];
-    
-    // Step 1 - Calculate Free Time Windows
-    let availableWindows = calculateFreeWindows(workDayStart, workDayEnd, commitments);
 
-    // TODO: Step 2 - Sort Tasks by Priority
-    // TODO: Step 3 - Loop through Tasks and slot them into Free Windows
+    // Step 1 - Calculate Free Time Windows
+    const availableWindows = calculateFreeWindows(workDayStart, workDayEnd, commitments);
+
+    // Step 2 - Sort Tasks by Priority (Highest number first)
+    const sortedTasks = [...tasks].sort((a, b) => b.priority - a.priority);
+
+    // Step 3 - Slotting Loop
+    for (const task of sortedTasks) {
+        let remainingMinutes = task.durationEstimate;
+
+        // Try to fit the task into available free time windows
+        for (let i = 0; i < availableWindows.length; i++) {
+            if (remainingMinutes <= 0) break; // Task is fully scheduled, move to the next task
+            
+            const window = availableWindows[i];
+
+            // Calculate how many minutes are left in this specific window
+            const windowDurationMs = window.end.getTime() - window.start.getTime();
+            const windowDurationMinutes = Math.floor(windowDurationMs / 60000);
+
+            if (windowDurationMinutes <= 0) continue; // Window is full, check the next one
+
+            // Determine how much of the task can fit in this window
+            const minutesToUse = Math.min(remainingMinutes, windowDurationMinutes);
+
+            // Calculate exact start and end dates for this block
+            const blockStart = new Date(window.start);
+            const blockEnd = new Date(blockStart.getTime() + minutesToUse * 60000);
+
+            // Slot it into the schedule
+            scheduledBlocks.push({
+                taskId: task.id,
+                startTime: blockStart,
+                endTime: blockEnd,
+            });
+
+            // Shrink the available window so the next task doesn't overlap
+            window.start = blockEnd;
+
+            // Deduct the scheduled time from the task's total duration
+            remainingMinutes -= minutesToUse;
+        }
+
+        // Step 4 - Spillover Check
+        // If every window is checked and the task still isn't finished, it gets bumped
+        if (remainingMinutes > 0) {
+            bumpedTaskIds.push(task.id);
+        }
+    }
 
     return {
         scheduledBlocks,
