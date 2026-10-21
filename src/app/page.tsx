@@ -2,6 +2,8 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { TaskForm } from '@/components/task-form';
 import { deleteTask, completeTask } from '@/app/actions/task';
+import { CommitmentForm } from '@/components/commitment-form';
+import { deleteCommitment } from '@/app/actions/commitments';
 
 export default async function Home() {
   const session = await auth();
@@ -30,6 +32,11 @@ export default async function Home() {
     orderBy: { createdAt: 'desc' },
   });
 
+  const commitments = await prisma.fixedCommitment.findMany({
+    where: { userId: session.user.id },
+    orderBy: { startTime: 'asc'},
+  });
+
   return (
     <div className="flex flex-col gap-8">
       <header>
@@ -38,9 +45,36 @@ export default async function Home() {
       </header>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        {/* Left Column: Task Creation */}
-        <section>
+        {/* Left Column: Inputs */}
+        <section className="flex flex-col gap-8">
           <TaskForm />
+
+          <div className="flex flex-col gap-4">
+            <CommitmentForm />
+
+            {/* List of Commitments */}
+            {commitments.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <h3 className="text-sm font-medium text-slate-400">Upcoming Commitments</h3>
+                <ul className="flex flex-col gap-2">
+                  {commitments.map((c) => (
+                    <li key={c.id} className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/50 p-3">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-white">{c.title}</span>
+                        <span className="text-xs text-slate-400">
+                          {c.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {c.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'})}
+                        </span>
+                      </div>
+                      <form action={deleteCommitment}>
+                        <input type="hidden" name="commitmentId" value={c.id} />
+                        <button type="submit" className="text-xs font-medium text-slate-500 hover:text-red-400">Remove</button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Right Column: Task Feed */}
