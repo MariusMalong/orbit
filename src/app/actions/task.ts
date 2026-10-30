@@ -76,3 +76,29 @@ export async function completeTask(formData: FormData) {
   // 4. Refresh the dashboard
   revalidatePath('/');
 }
+
+export async function updateTask(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const taskId = formData.get('taskId') as string;
+  const title = formData.get('title') as string;
+  const durationEstimate = parseInt(formData.get('durationEstimate') as string, 10);
+  const priority = parseInt(formData.get('priority') as string, 10);
+
+  await prisma.task.updateMany({
+    where: {
+      id: taskId,
+      userId: session.user.id, // Strict data isolation
+    },
+    data: {
+      title,
+      durationEstimate,
+      priority,
+    },
+  });
+
+  revalidatePath('/');
+}

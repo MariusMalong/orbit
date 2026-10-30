@@ -44,3 +44,29 @@ export async function deleteCommitment(formData: FormData) {
 
     revalidatePath('/');
 }
+
+export async function updateCommitment(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const commitmentId = formData.get('commitmentId') as string;
+  const title = formData.get('title') as string;
+  const startTime = new Date(formData.get('startTime') as string);
+  const endTime = new Date(formData.get('endTime') as string);
+
+  await prisma.fixedCommitment.updateMany({
+    where: {
+      id: commitmentId,
+      userId: session.user.id,
+    },
+    data: {
+      title,
+      startTime,
+      endTime,
+    },
+  });
+
+  revalidatePath('/');
+}

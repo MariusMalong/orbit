@@ -4,9 +4,14 @@ import { redirect } from 'next/navigation';
 import { TaskForm } from '@/components/task-form';
 import { CommitmentForm } from '@/components/commitment-form';
 import { Timeline } from '@/components/timeline';
+import { EditTaskModal } from '@/components/edit-task-modal';
+import { EditCommitmentModal } from '@/components/edit-commitment-modal';
+import { WorkdaySettings } from '@/components/workday-settings';
 import { generateSchedule, SchedulableTask, TimeWindow } from '@/lib/engine/scheduler';
 import { deleteTask, completeTask } from '@/app/actions/task';
 import { deleteCommitment } from '@/app/actions/commitments';
+
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default async function Home() {
   const session = await auth();
@@ -15,7 +20,10 @@ export default async function Home() {
     redirect('/api/auth/signin');
   }
 
-  // 1. Fetch raw data from database
+  const today = new Date();
+  const currentDayOfWeek = today.getDay(); // 0 - 6
+
+  // 1. Fetch data from database
   const rawTasks = await prisma.task.findMany({
     where: { 
       userId: session.user.id,
@@ -28,6 +36,27 @@ export default async function Home() {
     where: { userId: session.user.id },
     orderBy: { startTime: 'asc' },
   });
+
+  // Fetch Workday Availability for today (or fallback to 09:00 - 17:00)
+  const availability = await prisma.availability.findFirst({
+    where: {
+      userId: session.user.id,
+      dayOfWeek: currentDayOfWeek,
+    },
+  });
+
+  const startTimeStr = availability?.startTime || '09:00';
+  const endTimeStr = availability?.endTime || '17:00';
+
+  // Parse availability strings into today's Date objects
+  const [startHour, startMin] = startTimeStr.split(':').map(Number);
+  const [endHour, endMin] = endTimeStr.split(':').map(Number);
+
+  const workDayStart = new Date(today);
+  workDayStart.setHours(startHour, startMin, 0, 0);
+
+  const workDayEnd = new Date(today);
+  workDayEnd.setHours(endHour, endMin, 0, 0);
 
   // 2. Map Prisma data to Engine types
   const schedulableTasks: SchedulableTask[] = rawTasks.map((t) => ({
@@ -42,15 +71,7 @@ export default async function Home() {
     end: c.endTime,
   }));
 
-  // 3. Define default workday bounds (e.g., Today 9:00 AM to 5:00 PM)
-  const today = new Date();
-  const workDayStart = new Date(today);
-  workDayStart.setHours(9, 0, 0, 0);
-
-  const workDayEnd = new Date(today);
-  workDayEnd.setHours(17, 0, 0, 0);
-
-  // 4. Run the Scheduling Engine
+  // 3. Run the Scheduling Engine
   const { scheduledBlocks, bumpedTaskIds } = generateSchedule(
     schedulableTasks,
     timeWindows,
@@ -67,6 +88,16 @@ export default async function Home() {
         </div>
       </header>
 
+      {/* Dynamic Workday Bounds Control */}
+      <section className="mb-8">
+        <WorkdaySettings 
+          dayOfWeek={currentDayOfWeek}
+          dayName={DAYS[currentDayOfWeek]}
+          currentStart={startTimeStr}
+          currentEnd={endTimeStr}
+        />
+      </section>
+
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         {/* Left Column: Inputs & Raw Lists */}
         <section className="flex flex-col gap-8">
@@ -75,28 +106,30 @@ export default async function Home() {
           <div className="flex flex-col gap-4">
             <TaskForm />
             
-            {/* Active Tasks List */}
             {rawTasks.length > 0 && (
               <div className="flex flex-col gap-2">
                 <h3 className="text-sm font-medium text-slate-400">Active Tasks</h3>
                 <ul className="flex flex-col gap-2">
                   {rawTasks.map((task) => (
-                    <li key={task.id} className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/50 p-3">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-white">{task.title}</span>
-                        <span className="text-xs text-slate-400">
-                          {task.durationEstimate} mins | Priority {task.priority}
-                        </span>
-                      </div>
-                      <div className="flex gap-3">
-                        <form action={completeTask}>
-                          <input type="hidden" name="taskId" value={task.id} />
-                          <button type="submit" className="text-xs font-medium text-emerald-500 hover:text-emerald-400">Complete</button>
-                        </form>
-                        <form action={deleteTask}>
-                          <input type="hidden" name="taskId" value={task.id} />
-                          <button type="submit" className="text-xs font-medium text-slate-500 hover:text-red-400">Delete</button>
-                        </form>
+                    <li key={task.id} className="flex flex-col rounded-md border border-slate-800 bg-slate-900/50 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-white">{task.title}</span>
+                          <span className="text-xs text-slate-400">
+                            {task.durationEstimate} mins | Priority {task.priority}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <EditTaskModal task={task} />
+                          <form action={completeTask}>
+                            <input type="hidden" name="taskId" value={task.id} />
+                            <button type="submit" className="text-xs font-medium text-emerald-500 hover:text-emerald-400">Complete</button>
+                          </form>
+                          <form action={deleteTask}>
+                            <input type="hidden" name="taskId" value={task.id} />
+                            <button type="submit" className="text-xs font-medium text-slate-500 hover:text-red-400">Delete</button>
+                          </form>
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -109,23 +142,27 @@ export default async function Home() {
           <div className="flex flex-col gap-4">
             <CommitmentForm />
             
-            {/* List of Commitments */}
             {rawCommitments.length > 0 && (
               <div className="flex flex-col gap-2">
                 <h3 className="text-sm font-medium text-slate-400">Upcoming Commitments</h3>
                 <ul className="flex flex-col gap-2">
                   {rawCommitments.map((c) => (
-                    <li key={c.id} className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/50 p-3">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-white">{c.title}</span>
-                        <span className="text-xs text-slate-400">
-                          {c.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {c.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                    <li key={c.id} className="flex flex-col rounded-md border border-slate-800 bg-slate-900/50 p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-white">{c.title}</span>
+                          <span className="text-xs text-slate-400">
+                            {c.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {c.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <EditCommitmentModal commitment={c} />
+                          <form action={deleteCommitment}>
+                            <input type="hidden" name="commitmentId" value={c.id} />
+                            <button type="submit" className="text-xs font-medium text-slate-500 hover:text-red-400">Remove</button>
+                          </form>
+                        </div>
                       </div>
-                      <form action={deleteCommitment}>
-                        <input type="hidden" name="commitmentId" value={c.id} />
-                        <button type="submit" className="text-xs font-medium text-slate-500 hover:text-red-400">Remove</button>
-                      </form>
                     </li>
                   ))}
                 </ul>
