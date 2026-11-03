@@ -10,6 +10,7 @@ import { WorkdaySettings } from '@/components/workday-settings';
 import { generateSchedule, SchedulableTask, TimeWindow } from '@/lib/engine/scheduler';
 import { deleteTask, completeTask } from '@/app/actions/task';
 import { deleteCommitment } from '@/app/actions/commitments';
+import { FocusTimer } from '@/components/focus-timer';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -120,14 +121,15 @@ export default async function Home() {
                           </span>
                         </div>
                         <div className="flex items-center gap-3">
+                          <FocusTimer taskId={task.id} />
                           <EditTaskModal task={task} />
                           <form action={completeTask}>
                             <input type="hidden" name="taskId" value={task.id} />
-                            <button type="submit" className="text-xs font-medium text-emerald-500 hover:text-emerald-400">Complete</button>
+                            <button type="submit" className="text-xs">Complete</button>
                           </form>
                           <form action={deleteTask}>
                             <input type="hidden" name="taskId" value={task.id} />
-                            <button type="submit" className="text-xs font-medium text-slate-500 hover:text-red-400">Delete</button>
+                            <button type="submit" className="text-xs">Delete</button>
                           </form>
                         </div>
                       </div>
