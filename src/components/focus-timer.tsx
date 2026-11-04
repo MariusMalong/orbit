@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { logTimeEntry } from '@/app/actions/time-entry';
+import { buttonAccent, buttonPrimary } from '@/components/ui-classes';
 
 export function FocusTimer({ taskId }: { taskId: string }) {
   const [isActive, setIsActive] = useState(false);
@@ -55,26 +56,28 @@ export function FocusTimer({ taskId }: { taskId: string }) {
 
   return (
     <button
+      type="button"
       onClick={handleToggle}
       disabled={isSaving}
-      className={`flex items-center gap-2 rounded px-3 py-1.5 text-xs font-mono font-medium transition-colors ${
-        isActive 
-          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30' 
-          : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20'
-      }`}
+      className={`grow ${isActive ? buttonAccent : buttonPrimary}`}
     >
       {isSaving ? (
-        'Saving...'
+        'Saving…'
       ) : isActive ? (
         <>
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75"></span>
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500"></span>
+          <span className="relative flex h-2 w-2" aria-hidden="true">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ink opacity-50"></span>
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-ink"></span>
           </span>
-          Stop ({formatTime(seconds)})
+          Stop <span className="tabular-nums">{formatTime(seconds)}</span>
         </>
       ) : (
-        '▶ Start Focus'
+        <>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M7 4l13 8-13 8z" />
+          </svg>
+          Start focus
+        </>
       )}
     </button>
   );

@@ -1,5 +1,30 @@
 @import "tailwindcss";
 
-body {
-  @apply bg-slate-950 text-slate-50 antialiased;
+/*
+ * Studio design tokens.
+ * Each --color-* entry becomes a Tailwind utility (bg-canvas, text-ink, border-line, ...),
+ * so components reference the palette by role instead of by raw hex value.
+ */
+@theme {
+  --color-canvas: #ecedef;       /* page background */
+  --color-surface: #ffffff;      /* panels, inputs */
+  --color-subtle: #f4f5f7;       /* secondary buttons, chips */
+  --color-line: #d8dadf;         /* panel and input borders */
+  --color-line-soft: #e6e7ea;    /* dividers, timeline hour lines */
+  --color-ink: #16181d;          /* primary text, primary buttons */
+  --color-ink-2: #3a3e47;        /* secondary text on tinted surfaces */
+  --color-muted: #555a64;        /* labels, helper text (7:1 on white) */
+  --color-accent: #f08a4b;       /* timeline blocks, active timer */
+  --color-accent-hover: #e67a37;
+  --color-accent-tint: #fbdcc8;  /* opaque so grid lines don't show through blocks */
+  --color-danger: #a12a1a;
+  --color-warning-bg: #fff4e5;
+  --color-warning-line: #f3c99a;
+  --color-warning-ink: #7a3e00;
+}
+
+/* Font families come from next/font CSS variables set on <html> in layout.tsx. */
+@theme inline {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
 }
