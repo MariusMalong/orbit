@@ -1,0 +1,3 @@
+# Prettier already skips everything in .gitignore; these are tracked but generated or formatted elsewhere.
+package-lock.json
+prisma/
