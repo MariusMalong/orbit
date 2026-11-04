@@ -13,8 +13,18 @@ import { deleteCommitment } from '@/app/actions/commitments';
 import { FocusTimer } from '@/components/focus-timer';
 import { StatsRow } from '@/components/stats-row';
 import { summarizeDay } from '@/lib/analytics/summarize';
+import { formatClock, formatShortDay, PRIORITY_LABELS } from '@/lib/format';
+import { buttonSecondary, iconButtonDanger, panel, panelTitle } from '@/components/ui-classes';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
+    </svg>
+  );
+}
 
 export default async function Home() {
   const session = await auth();
@@ -118,113 +128,124 @@ export default async function Home() {
     scheduledBlocks,
   });
 
+  const todayLabel = today.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
   return (
-    <main className="mx-auto max-w-6xl p-6">
-      <header className="mb-8 flex items-center justify-between">
+    <div className="flex flex-col gap-5">
+      {/* Page heading + daily analytics */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Orbit Workstation</h1>
-          <p className="text-sm text-slate-400">Welcome back, {session.user.name}</p>
+          <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">{todayLabel}</h1>
+          <p className="mt-1 text-muted">Welcome back, {session.user.name}</p>
         </div>
-      </header>
-
-      {/* Daily Analytics */}
-      <section className="mb-8">
         <StatsRow summary={summary} />
-      </section>
-
-      {/* Dynamic Workday Bounds Control */}
-      <section className="mb-8">
-        <WorkdaySettings 
-          dayOfWeek={currentDayOfWeek}
-          dayName={DAYS[currentDayOfWeek]}
-          currentStart={startTimeStr}
-          currentEnd={endTimeStr}
-        />
-      </section>
-
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        {/* Left Column: Inputs & Raw Lists */}
-        <section className="flex flex-col gap-8">
-          
-          {/* Tasks Section */}
-          <div className="flex flex-col gap-4">
-            <TaskForm />
-            
-            {rawTasks.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <h3 className="text-sm font-medium text-slate-400">Active Tasks</h3>
-                <ul className="flex flex-col gap-2">
-                  {rawTasks.map((task) => (
-                    <li key={task.id} className="flex flex-col rounded-md border border-slate-800 bg-slate-900/50 p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-white">{task.title}</span>
-                          <span className="text-xs text-slate-400">
-                            {task.durationEstimate} mins | Priority {task.priority}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <FocusTimer taskId={task.id} />
-                          <EditTaskModal task={task} />
-                          <form action={completeTask}>
-                            <input type="hidden" name="taskId" value={task.id} />
-                            <button type="submit" className="text-xs">Complete</button>
-                          </form>
-                          <form action={deleteTask}>
-                            <input type="hidden" name="taskId" value={task.id} />
-                            <button type="submit" className="text-xs">Delete</button>
-                          </form>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-          
-          {/* Commitments Section */}
-          <div className="flex flex-col gap-4">
-            <CommitmentForm />
-            
-            {rawCommitments.length > 0 && (
-              <div className="flex flex-col gap-2">
-                <h3 className="text-sm font-medium text-slate-400">Upcoming Commitments</h3>
-                <ul className="flex flex-col gap-2">
-                  {rawCommitments.map((c) => (
-                    <li key={c.id} className="flex flex-col rounded-md border border-slate-800 bg-slate-900/50 p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-white">{c.title}</span>
-                          <span className="text-xs text-slate-400">
-                            {c.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {c.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <EditCommitmentModal commitment={c} />
-                          <form action={deleteCommitment}>
-                            <input type="hidden" name="commitmentId" value={c.id} />
-                            <button type="submit" className="text-xs font-medium text-slate-500 hover:text-red-400">Remove</button>
-                          </form>
-                        </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Right Column: Engine Generated Timeline */}
-        <section>
-          <Timeline 
-            scheduledBlocks={scheduledBlocks} 
-            bumpedTaskIds={bumpedTaskIds} 
-            tasks={schedulableTasks} 
-          />
-        </section>
       </div>
-    </main>
+
+      <div className="flex flex-wrap items-start gap-5">
+        {/* Main column: engine-generated timeline */}
+        <div className="min-w-0 flex-[999_1_560px]">
+          <Timeline
+            scheduledBlocks={scheduledBlocks}
+            bumpedTaskIds={bumpedTaskIds}
+            tasks={schedulableTasks}
+            commitments={rawCommitments.map((c) => ({ id: c.id, title: c.title, start: c.startTime, end: c.endTime }))}
+            workDayStart={workDayStart}
+            workDayEnd={workDayEnd}
+            headerAction={
+              <WorkdaySettings
+                dayOfWeek={currentDayOfWeek}
+                dayName={DAYS[currentDayOfWeek]}
+                currentStart={startTimeStr}
+                currentEnd={endTimeStr}
+              />
+            }
+          />
+        </div>
+
+        {/* Sidebar: tasks and commitments */}
+        <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-5">
+          <section aria-labelledby="active-tasks-heading" className={panel}>
+            <h2 id="active-tasks-heading" className={`${panelTitle} mb-3`}>Active tasks</h2>
+            {rawTasks.length === 0 ? (
+              <p className="text-sm text-muted">No active tasks. Add one below and it will appear on your plan.</p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {rawTasks.map((task) => {
+                  const isInProgress = task.status === 'IN_PROGRESS';
+                  return (
+                    <li key={task.id} className="flex flex-col gap-3 rounded-lg border border-line-soft p-3.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold">{task.title}</p>
+                          <p className="text-sm text-muted">
+                            {task.durationEstimate} min{isInProgress ? ' left' : ''} · {PRIORITY_LABELS[task.priority] ?? task.priority} priority
+                          </p>
+                        </div>
+                        {isInProgress && (
+                          <span className="shrink-0 rounded-full bg-subtle px-2 py-0.5 text-xs text-ink-2">In progress</span>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <FocusTimer taskId={task.id} />
+                        <EditTaskModal task={task} />
+                        <form action={completeTask}>
+                          <input type="hidden" name="taskId" value={task.id} />
+                          <button type="submit" className={buttonSecondary}>Done</button>
+                        </form>
+                        <form action={deleteTask}>
+                          <input type="hidden" name="taskId" value={task.id} />
+                          <button type="submit" aria-label={`Delete ${task.title}`} className={iconButtonDanger}>
+                            <TrashIcon />
+                          </button>
+                        </form>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          <TaskForm />
+
+          <section aria-labelledby="commitments-heading" className={panel}>
+            <h2 id="commitments-heading" className={panelTitle}>Fixed commitments</h2>
+            <p className="mb-4 mt-1 text-sm text-muted">
+              Appointments and events the scheduler plans around.
+            </p>
+
+            {rawCommitments.length > 0 && (
+              <ul className="mb-4 flex flex-col gap-2">
+                {rawCommitments.map((c) => (
+                  <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line-soft p-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{c.title}</p>
+                      <p className="text-sm text-muted">
+                        {formatShortDay(c.startTime)} · {formatClock(c.startTime)} – {formatClock(c.endTime)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <EditCommitmentModal commitment={c} />
+                      <form action={deleteCommitment}>
+                        <input type="hidden" name="commitmentId" value={c.id} />
+                        <button type="submit" aria-label={`Remove ${c.title}`} className={iconButtonDanger}>
+                          <TrashIcon />
+                        </button>
+                      </form>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <CommitmentForm />
+          </section>
+        </div>
+      </div>
+    </div>
   );
 }
