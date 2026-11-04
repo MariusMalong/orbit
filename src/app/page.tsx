@@ -11,6 +11,8 @@ import { generateSchedule, SchedulableTask, TimeWindow } from '@/lib/engine/sche
 import { deleteTask, completeTask } from '@/app/actions/task';
 import { deleteCommitment } from '@/app/actions/commitments';
 import { FocusTimer } from '@/components/focus-timer';
+import { StatsRow } from '@/components/stats-row';
+import { summarizeDay } from '@/lib/analytics/summarize';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -82,6 +84,40 @@ export default async function Home() {
     workDayEnd
   );
 
+  // 4. Analytics: aggregate today's executed time and task completion
+  const startOfToday = new Date(today);
+  startOfToday.setHours(0, 0, 0, 0);
+  const startOfTomorrow = new Date(startOfToday);
+  startOfTomorrow.setDate(startOfToday.getDate() + 1);
+
+  const [todaysEntries, completedTodayCount] = await Promise.all([
+    // TimeEntry has no userId column, so ownership is enforced through the
+    // parent Task relation. Only entries on this user's tasks can match.
+    prisma.timeEntry.findMany({
+      where: {
+        task: { userId: session.user.id },
+        startTime: { gte: startOfToday, lt: startOfTomorrow },
+      },
+      select: { duration: true },
+    }),
+    // No completedAt column exists; updatedAt is set by the COMPLETED
+    // transition, so it is used as the completion timestamp.
+    prisma.task.count({
+      where: {
+        userId: session.user.id,
+        status: 'COMPLETED',
+        updatedAt: { gte: startOfToday, lt: startOfTomorrow },
+      },
+    }),
+  ]);
+
+  const summary = summarizeDay({
+    focusEntries: todaysEntries,
+    completedTaskCount: completedTodayCount,
+    activeTaskCount: rawTasks.length,
+    scheduledBlocks,
+  });
+
   return (
     <main className="mx-auto max-w-6xl p-6">
       <header className="mb-8 flex items-center justify-between">
@@ -90,6 +126,11 @@ export default async function Home() {
           <p className="text-sm text-slate-400">Welcome back, {session.user.name}</p>
         </div>
       </header>
+
+      {/* Daily Analytics */}
+      <section className="mb-8">
+        <StatsRow summary={summary} />
+      </section>
 
       {/* Dynamic Workday Bounds Control */}
       <section className="mb-8">
