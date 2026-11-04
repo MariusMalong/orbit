@@ -25,10 +25,12 @@ export default async function Home() {
   const currentDayOfWeek = today.getDay(); // 0 - 6
 
   // 1. Fetch data from database
+  // IN_PROGRESS tasks (partially worked via the Focus Timer) still have remaining
+  // time, so they must stay in the engine's input alongside untouched TODO tasks.
   const rawTasks = await prisma.task.findMany({
-    where: { 
+    where: {
       userId: session.user.id,
-      status: 'TODO'
+      status: { in: ['TODO', 'IN_PROGRESS'] },
     },
     orderBy: { createdAt: 'desc' },
   });
