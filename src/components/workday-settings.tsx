@@ -5,16 +5,24 @@ interface WorkdaySettingsProps {
   dayOfWeek: number;
   dayName: string;
   currentStart: string; // "09:00"
-  currentEnd: string;   // "17:00"
+  currentEnd: string; // "17:00"
 }
 
 const timeInput =
   'min-h-10 rounded-lg border border-line bg-surface px-2 text-sm text-ink tabular-nums ' +
   'focus:border-ink focus:outline-none focus:ring-2 focus:ring-accent/40';
 
-export function WorkdaySettings({ dayOfWeek, dayName, currentStart, currentEnd }: WorkdaySettingsProps) {
+export function WorkdaySettings({
+  dayOfWeek,
+  dayName,
+  currentStart,
+  currentEnd,
+}: WorkdaySettingsProps) {
   return (
-    <form action={setDayAvailability} className="flex flex-wrap items-center gap-2">
+    <form
+      action={setDayAvailability}
+      className="flex flex-wrap items-center gap-2"
+    >
       <input type="hidden" name="dayOfWeek" value={dayOfWeek} />
 
       <label htmlFor="workday-start" className="text-sm text-muted">
@@ -28,7 +36,9 @@ export function WorkdaySettings({ dayOfWeek, dayName, currentStart, currentEnd }
         required
         className={timeInput}
       />
-      <span className="text-sm text-muted" aria-hidden="true">to</span>
+      <span className="text-sm text-muted" aria-hidden="true">
+        to
+      </span>
       <label htmlFor="workday-end" className="sr-only">
         {dayName} end time
       </label>

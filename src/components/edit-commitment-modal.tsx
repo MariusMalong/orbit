@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import { updateCommitment } from '@/app/actions/commitments';
-import { buttonPrimary, buttonSecondary, fieldInput, fieldLabel } from '@/components/ui-classes';
+import {
+  buttonPrimary,
+  buttonSecondary,
+  fieldInput,
+  fieldLabel,
+} from '@/components/ui-classes';
 import { formatForDateTimeInput } from '@/lib/format';
 
 interface EditCommitmentProps {
@@ -20,7 +25,11 @@ export function EditCommitmentModal({ commitment }: EditCommitmentProps) {
 
   return (
     <>
-      <button type="button" onClick={() => setIsOpen(true)} className={buttonSecondary}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className={buttonSecondary}
+      >
         Edit
       </button>
 
@@ -35,7 +44,12 @@ export function EditCommitmentModal({ commitment }: EditCommitmentProps) {
             aria-labelledby={headingId}
             className="w-full max-w-md rounded-xl border border-line bg-surface p-6 shadow-xl"
           >
-            <h2 id={headingId} className="mb-4 font-display text-lg font-semibold">Edit commitment</h2>
+            <h2
+              id={headingId}
+              className="mb-4 font-display text-lg font-semibold"
+            >
+              Edit commitment
+            </h2>
             <form
               action={async (formData) => {
                 await updateCommitment(formData);
@@ -45,7 +59,10 @@ export function EditCommitmentModal({ commitment }: EditCommitmentProps) {
             >
               <input type="hidden" name="commitmentId" value={commitment.id} />
 
-              <label htmlFor={`edit-commitment-title-${commitment.id}`} className={fieldLabel}>
+              <label
+                htmlFor={`edit-commitment-title-${commitment.id}`}
+                className={fieldLabel}
+              >
                 Event
                 <input
                   type="text"
@@ -59,24 +76,34 @@ export function EditCommitmentModal({ commitment }: EditCommitmentProps) {
               </label>
 
               <div className="flex flex-wrap gap-3">
-                <label htmlFor={`edit-commitment-start-${commitment.id}`} className={`${fieldLabel} flex-[1_1_160px]`}>
+                <label
+                  htmlFor={`edit-commitment-start-${commitment.id}`}
+                  className={`${fieldLabel} flex-[1_1_160px]`}
+                >
                   Starts
                   <input
                     type="datetime-local"
                     name="startTime"
                     id={`edit-commitment-start-${commitment.id}`}
-                    defaultValue={formatForDateTimeInput(new Date(commitment.startTime))}
+                    defaultValue={formatForDateTimeInput(
+                      new Date(commitment.startTime)
+                    )}
                     required
                     className={fieldInput}
                   />
                 </label>
-                <label htmlFor={`edit-commitment-end-${commitment.id}`} className={`${fieldLabel} flex-[1_1_160px]`}>
+                <label
+                  htmlFor={`edit-commitment-end-${commitment.id}`}
+                  className={`${fieldLabel} flex-[1_1_160px]`}
+                >
                   Ends
                   <input
                     type="datetime-local"
                     name="endTime"
                     id={`edit-commitment-end-${commitment.id}`}
-                    defaultValue={formatForDateTimeInput(new Date(commitment.endTime))}
+                    defaultValue={formatForDateTimeInput(
+                      new Date(commitment.endTime)
+                    )}
                     required
                     className={fieldInput}
                   />
@@ -84,7 +111,11 @@ export function EditCommitmentModal({ commitment }: EditCommitmentProps) {
               </div>
 
               <div className="mt-2 flex justify-end gap-2">
-                <button type="button" onClick={() => setIsOpen(false)} className={buttonSecondary}>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className={buttonSecondary}
+                >
                   Cancel
                 </button>
                 <button type="submit" className={buttonPrimary}>

@@ -2,7 +2,12 @@
 
 import { useState } from 'react';
 import { updateTask } from '@/app/actions/task';
-import { buttonPrimary, buttonSecondary, fieldInput, fieldLabel } from '@/components/ui-classes';
+import {
+  buttonPrimary,
+  buttonSecondary,
+  fieldInput,
+  fieldLabel,
+} from '@/components/ui-classes';
 
 interface EditTaskProps {
   task: {
@@ -19,7 +24,11 @@ export function EditTaskModal({ task }: EditTaskProps) {
 
   return (
     <>
-      <button type="button" onClick={() => setIsOpen(true)} className={buttonSecondary}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        className={buttonSecondary}
+      >
         Edit
       </button>
 
@@ -34,7 +43,12 @@ export function EditTaskModal({ task }: EditTaskProps) {
             aria-labelledby={headingId}
             className="w-full max-w-md rounded-xl border border-line bg-surface p-6 shadow-xl"
           >
-            <h2 id={headingId} className="mb-4 font-display text-lg font-semibold">Edit task</h2>
+            <h2
+              id={headingId}
+              className="mb-4 font-display text-lg font-semibold"
+            >
+              Edit task
+            </h2>
             <form
               action={async (formData) => {
                 await updateTask(formData);
@@ -44,7 +58,10 @@ export function EditTaskModal({ task }: EditTaskProps) {
             >
               <input type="hidden" name="taskId" value={task.id} />
 
-              <label htmlFor={`edit-task-title-${task.id}`} className={fieldLabel}>
+              <label
+                htmlFor={`edit-task-title-${task.id}`}
+                className={fieldLabel}
+              >
                 Title
                 <input
                   type="text"
@@ -58,7 +75,10 @@ export function EditTaskModal({ task }: EditTaskProps) {
               </label>
 
               <div className="flex gap-3">
-                <label htmlFor={`edit-task-duration-${task.id}`} className={`${fieldLabel} flex-1`}>
+                <label
+                  htmlFor={`edit-task-duration-${task.id}`}
+                  className={`${fieldLabel} flex-1`}
+                >
                   Minutes left
                   <input
                     type="number"
@@ -70,7 +90,10 @@ export function EditTaskModal({ task }: EditTaskProps) {
                     className={fieldInput}
                   />
                 </label>
-                <label htmlFor={`edit-task-priority-${task.id}`} className={`${fieldLabel} flex-1`}>
+                <label
+                  htmlFor={`edit-task-priority-${task.id}`}
+                  className={`${fieldLabel} flex-1`}
+                >
                   Priority
                   <select
                     name="priority"
@@ -86,7 +109,11 @@ export function EditTaskModal({ task }: EditTaskProps) {
               </div>
 
               <div className="mt-2 flex justify-end gap-2">
-                <button type="button" onClick={() => setIsOpen(false)} className={buttonSecondary}>
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className={buttonSecondary}
+                >
                   Cancel
                 </button>
                 <button type="submit" className={buttonPrimary}>

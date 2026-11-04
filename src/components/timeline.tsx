@@ -36,7 +36,9 @@ export function Timeline({
 }: TimelineProps) {
   // Quick lookup map to resolve task titles and priorities by ID
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const bumpedTasks = bumpedTaskIds.map((id) => taskMap.get(id)).filter(Boolean) as SchedulableTask[];
+  const bumpedTasks = bumpedTaskIds
+    .map((id) => taskMap.get(id))
+    .filter(Boolean) as SchedulableTask[];
 
   // The grid snaps outward to whole hours so every hour line gets a label.
   const gridStart = new Date(workDayStart);
@@ -45,11 +47,18 @@ export function Timeline({
   if (gridEnd.getMinutes() > 0) {
     gridEnd.setHours(gridEnd.getHours() + 1, 0, 0, 0);
   }
-  const hourCount = Math.max(1, Math.round((gridEnd.getTime() - gridStart.getTime()) / MS_PER_HOUR));
-  const hourMarks = Array.from({ length: hourCount + 1 }, (_, i) => new Date(gridStart.getTime() + i * MS_PER_HOUR));
+  const hourCount = Math.max(
+    1,
+    Math.round((gridEnd.getTime() - gridStart.getTime()) / MS_PER_HOUR)
+  );
+  const hourMarks = Array.from(
+    { length: hourCount + 1 },
+    (_, i) => new Date(gridStart.getTime() + i * MS_PER_HOUR)
+  );
 
   // Convert an absolute time into a pixel offset from the top of the grid.
-  const offsetPx = (date: Date) => ((date.getTime() - gridStart.getTime()) / MS_PER_MINUTE) * PX_PER_MINUTE;
+  const offsetPx = (date: Date) =>
+    ((date.getTime() - gridStart.getTime()) / MS_PER_MINUTE) * PX_PER_MINUTE;
 
   // Only commitments that overlap today's grid are drawn, clipped to its edges.
   const visibleCommitments = commitments
@@ -61,22 +70,37 @@ export function Timeline({
     }));
 
   return (
-    <section aria-labelledby="plan-heading" className={`${panel} flex flex-col gap-5 md:p-6`}>
+    <section
+      aria-labelledby="plan-heading"
+      className={`${panel} flex flex-col gap-5 md:p-6`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 id="plan-heading" className="font-display text-xl font-semibold">Today&apos;s plan</h2>
-          <p className="mt-0.5 text-sm text-muted">Built from your priorities, around fixed commitments</p>
+          <h2 id="plan-heading" className="font-display text-xl font-semibold">
+            Today&apos;s plan
+          </h2>
+          <p className="mt-0.5 text-sm text-muted">
+            Built from your priorities, around fixed commitments
+          </p>
         </div>
         {headerAction}
       </div>
 
       {/* Spillover warning: tasks the engine could not fit inside the workday */}
       {bumpedTasks.length > 0 && (
-        <div role="status" className="rounded-lg border border-warning-line bg-warning-bg p-4 text-warning-ink">
+        <div
+          role="status"
+          className="rounded-lg border border-warning-line bg-warning-bg p-4 text-warning-ink"
+        >
           <p className="text-sm font-semibold">
-            {bumpedTasks.length === 1 ? '1 task' : `${bumpedTasks.length} tasks`} didn&apos;t fit today
+            {bumpedTasks.length === 1
+              ? '1 task'
+              : `${bumpedTasks.length} tasks`}{' '}
+            didn&apos;t fit today
           </p>
-          <p className="mt-1 text-sm">Extend your hours or free up time to fit the rest in.</p>
+          <p className="mt-1 text-sm">
+            Extend your hours or free up time to fit the rest in.
+          </p>
           <ul className="mt-2 flex flex-col gap-0.5 text-sm">
             {bumpedTasks.map((task) => (
               <li key={task.id}>
@@ -94,14 +118,17 @@ export function Timeline({
       )}
 
       {/* Calendar grid */}
-      <div className="relative mb-2 mt-2" style={{ height: hourCount * HOUR_HEIGHT_PX }}>
+      <div
+        className="relative mt-2 mb-2"
+        style={{ height: hourCount * HOUR_HEIGHT_PX }}
+      >
         {hourMarks.map((mark) => (
           <div
             key={mark.getTime()}
             className="absolute inset-x-0 flex gap-3"
             style={{ top: offsetPx(mark) }}
           >
-            <span className="-mt-2 w-12 shrink-0 text-right text-xs tabular-nums text-muted">
+            <span className="-mt-2 w-12 shrink-0 text-right text-xs text-muted tabular-nums">
               {formatClock(mark)}
             </span>
             <div className="flex-1 border-t border-line-soft" />
@@ -111,8 +138,11 @@ export function Timeline({
         {visibleCommitments.map((c) => (
           <div
             key={c.id}
-            className="absolute left-16 right-1 overflow-hidden rounded-lg border border-dashed border-line bg-subtle px-4 py-2"
-            style={{ top: offsetPx(c.drawStart), height: offsetPx(c.drawEnd) - offsetPx(c.drawStart) }}
+            className="absolute right-1 left-16 overflow-hidden rounded-lg border border-dashed border-line bg-subtle px-4 py-2"
+            style={{
+              top: offsetPx(c.drawStart),
+              height: offsetPx(c.drawEnd) - offsetPx(c.drawStart),
+            }}
           >
             <p className="truncate text-sm font-medium text-ink-2">{c.title}</p>
             <p className="text-xs text-muted">
@@ -127,20 +157,24 @@ export function Timeline({
 
           const top = offsetPx(block.startTime);
           const height = offsetPx(block.endTime) - top;
-          const minutes = Math.round((block.endTime.getTime() - block.startTime.getTime()) / MS_PER_MINUTE);
+          const minutes = Math.round(
+            (block.endTime.getTime() - block.startTime.getTime()) /
+              MS_PER_MINUTE
+          );
           const isCompact = height < 44;
 
           return (
             <div
               key={`${block.taskId}-${index}`}
-              className={`absolute left-16 right-1 flex items-start justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 ${isCompact ? 'py-1' : 'py-2.5'}`}
+              className={`absolute right-1 left-16 flex items-start justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 ${isCompact ? 'py-1' : 'py-2.5'}`}
               style={{ top, height }}
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{task.title}</p>
                 {!isCompact && (
                   <p className="text-xs text-ink-2">
-                    {formatClock(block.startTime)} – {formatClock(block.endTime)} · {minutes} min
+                    {formatClock(block.startTime)} –{' '}
+                    {formatClock(block.endTime)} · {minutes} min
                   </p>
                 )}
               </div>

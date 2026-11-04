@@ -12,7 +12,7 @@ export async function setDayAvailability(formData: FormData) {
 
   const dayOfWeek = parseInt(formData.get('dayOfWeek') as string, 10); // 0 (Sun) - 6 (Sat)
   const startTime = formData.get('startTime') as string; // e.g., "09:00"
-  const endTime = formData.get('endTime') as string;     // e.g., "17:00"
+  const endTime = formData.get('endTime') as string; // e.g., "17:00"
 
   // Upsert availability for this specific day of week
   const existing = await prisma.availability.findFirst({

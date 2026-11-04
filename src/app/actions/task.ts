@@ -69,9 +69,9 @@ export async function completeTask(formData: FormData) {
       userId: session.user.id,
     },
     data: {
-      status: 'COMPLETED'
+      status: 'COMPLETED',
     },
-  })
+  });
 
   // 4. Refresh the dashboard
   revalidatePath('/');
@@ -85,7 +85,10 @@ export async function updateTask(formData: FormData) {
 
   const taskId = formData.get('taskId') as string;
   const title = formData.get('title') as string;
-  const durationEstimate = parseInt(formData.get('durationEstimate') as string, 10);
+  const durationEstimate = parseInt(
+    formData.get('durationEstimate') as string,
+    10
+  );
   const priority = parseInt(formData.get('priority') as string, 10);
 
   await prisma.task.updateMany({

@@ -9,7 +9,10 @@ export async function logTimeEntry(formData: FormData) {
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   const taskId = formData.get('taskId') as string;
-  const durationMinutes = parseInt(formData.get('durationMinutes') as string, 10);
+  const durationMinutes = parseInt(
+    formData.get('durationMinutes') as string,
+    10
+  );
   const startTime = new Date(formData.get('startTime') as string);
   const endTime = new Date(formData.get('endTime') as string);
 
@@ -34,7 +37,7 @@ export async function logTimeEntry(formData: FormData) {
 
   // 3. Subtract the time worked from the estimate (floor at 0)
   const newEstimate = Math.max(0, task.durationEstimate - durationMinutes);
-  
+
   await prisma.task.update({
     where: { id: taskId },
     data: {

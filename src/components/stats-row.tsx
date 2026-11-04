@@ -13,7 +13,10 @@ export function StatsRow({ summary }: StatsRowProps) {
       value: `${summary.completedTasks} / ${summary.plannedTasks}`,
       suffix: `${summary.completionRate}%`,
     },
-    { label: 'Still scheduled', value: formatMinutes(summary.scheduledMinutes) },
+    {
+      label: 'Still scheduled',
+      value: formatMinutes(summary.scheduledMinutes),
+    },
   ];
 
   return (
@@ -27,7 +30,9 @@ export function StatsRow({ summary }: StatsRowProps) {
           <dd className="mt-0.5 font-display text-2xl font-semibold tabular-nums">
             {stat.value}
             {stat.suffix && (
-              <span className="ml-1.5 font-sans text-sm font-medium text-muted">{stat.suffix}</span>
+              <span className="ml-1.5 font-sans text-sm font-medium text-muted">
+                {stat.suffix}
+              </span>
             )}
           </dd>
         </div>

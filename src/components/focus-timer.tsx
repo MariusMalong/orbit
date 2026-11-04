@@ -29,7 +29,7 @@ export function FocusTimer({ taskId }: { taskId: string }) {
       // Stop and Save
       setIsActive(false);
       setIsSaving(true);
-      
+
       const endTime = new Date();
       // Round to nearest minute, minimum 1 minute to avoid 0-minute logs
       const durationMinutes = Math.max(1, Math.round(seconds / 60));
@@ -41,7 +41,7 @@ export function FocusTimer({ taskId }: { taskId: string }) {
       formData.append('endTime', endTime.toISOString());
 
       await logTimeEntry(formData);
-      
+
       setSeconds(0);
       setStartTime(null);
       setIsSaving(false);
@@ -49,7 +49,9 @@ export function FocusTimer({ taskId }: { taskId: string }) {
   };
 
   const formatTime = (totalSeconds: number) => {
-    const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+    const m = Math.floor(totalSeconds / 60)
+      .toString()
+      .padStart(2, '0');
     const s = (totalSeconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   };
@@ -73,7 +75,13 @@ export function FocusTimer({ taskId }: { taskId: string }) {
         </>
       ) : (
         <>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
             <path d="M7 4l13 8-13 8z" />
           </svg>
           Start focus

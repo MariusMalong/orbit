@@ -7,20 +7,45 @@ import { Timeline } from '@/components/timeline';
 import { EditTaskModal } from '@/components/edit-task-modal';
 import { EditCommitmentModal } from '@/components/edit-commitment-modal';
 import { WorkdaySettings } from '@/components/workday-settings';
-import { generateSchedule, SchedulableTask, TimeWindow } from '@/lib/engine/scheduler';
+import {
+  generateSchedule,
+  SchedulableTask,
+  TimeWindow,
+} from '@/lib/engine/scheduler';
 import { deleteTask, completeTask } from '@/app/actions/task';
 import { deleteCommitment } from '@/app/actions/commitments';
 import { FocusTimer } from '@/components/focus-timer';
 import { StatsRow } from '@/components/stats-row';
 import { summarizeDay } from '@/lib/analytics/summarize';
 import { formatClock, formatShortDay, PRIORITY_LABELS } from '@/lib/format';
-import { buttonSecondary, iconButtonDanger, panel, panelTitle } from '@/components/ui-classes';
+import {
+  buttonSecondary,
+  iconButtonDanger,
+  panel,
+  panelTitle,
+} from '@/components/ui-classes';
 
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAYS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
 
 function TrashIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
     </svg>
   );
@@ -139,7 +164,9 @@ export default async function Home() {
       {/* Page heading + daily analytics */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">{todayLabel}</h1>
+          <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
+            {todayLabel}
+          </h1>
           <p className="mt-1 text-muted">Welcome back, {session.user.name}</p>
         </div>
         <StatsRow summary={summary} />
@@ -152,7 +179,12 @@ export default async function Home() {
             scheduledBlocks={scheduledBlocks}
             bumpedTaskIds={bumpedTaskIds}
             tasks={schedulableTasks}
-            commitments={rawCommitments.map((c) => ({ id: c.id, title: c.title, start: c.startTime, end: c.endTime }))}
+            commitments={rawCommitments.map((c) => ({
+              id: c.id,
+              title: c.title,
+              start: c.startTime,
+              end: c.endTime,
+            }))}
             workDayStart={workDayStart}
             workDayEnd={workDayEnd}
             headerAction={
@@ -169,24 +201,36 @@ export default async function Home() {
         {/* Sidebar: tasks and commitments */}
         <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-5">
           <section aria-labelledby="active-tasks-heading" className={panel}>
-            <h2 id="active-tasks-heading" className={`${panelTitle} mb-3`}>Active tasks</h2>
+            <h2 id="active-tasks-heading" className={`${panelTitle} mb-3`}>
+              Active tasks
+            </h2>
             {rawTasks.length === 0 ? (
-              <p className="text-sm text-muted">No active tasks. Add one below and it will appear on your plan.</p>
+              <p className="text-sm text-muted">
+                No active tasks. Add one below and it will appear on your plan.
+              </p>
             ) : (
               <ul className="flex flex-col gap-3">
                 {rawTasks.map((task) => {
                   const isInProgress = task.status === 'IN_PROGRESS';
                   return (
-                    <li key={task.id} className="flex flex-col gap-3 rounded-lg border border-line-soft p-3.5">
+                    <li
+                      key={task.id}
+                      className="flex flex-col gap-3 rounded-lg border border-line-soft p-3.5"
+                    >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <p className="truncate font-semibold">{task.title}</p>
                           <p className="text-sm text-muted">
-                            {task.durationEstimate} min{isInProgress ? ' left' : ''} · {PRIORITY_LABELS[task.priority] ?? task.priority} priority
+                            {task.durationEstimate} min
+                            {isInProgress ? ' left' : ''} ·{' '}
+                            {PRIORITY_LABELS[task.priority] ?? task.priority}{' '}
+                            priority
                           </p>
                         </div>
                         {isInProgress && (
-                          <span className="shrink-0 rounded-full bg-subtle px-2 py-0.5 text-xs text-ink-2">In progress</span>
+                          <span className="shrink-0 rounded-full bg-subtle px-2 py-0.5 text-xs text-ink-2">
+                            In progress
+                          </span>
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -194,11 +238,17 @@ export default async function Home() {
                         <EditTaskModal task={task} />
                         <form action={completeTask}>
                           <input type="hidden" name="taskId" value={task.id} />
-                          <button type="submit" className={buttonSecondary}>Done</button>
+                          <button type="submit" className={buttonSecondary}>
+                            Done
+                          </button>
                         </form>
                         <form action={deleteTask}>
                           <input type="hidden" name="taskId" value={task.id} />
-                          <button type="submit" aria-label={`Delete ${task.title}`} className={iconButtonDanger}>
+                          <button
+                            type="submit"
+                            aria-label={`Delete ${task.title}`}
+                            className={iconButtonDanger}
+                          >
                             <TrashIcon />
                           </button>
                         </form>
@@ -213,26 +263,36 @@ export default async function Home() {
           <TaskForm />
 
           <section aria-labelledby="commitments-heading" className={panel}>
-            <h2 id="commitments-heading" className={panelTitle}>Fixed commitments</h2>
-            <p className="mb-4 mt-1 text-sm text-muted">
+            <h2 id="commitments-heading" className={panelTitle}>
+              Fixed commitments
+            </h2>
+            <p className="mt-1 mb-4 text-sm text-muted">
               Appointments and events the scheduler plans around.
             </p>
 
             {rawCommitments.length > 0 && (
               <ul className="mb-4 flex flex-col gap-2">
                 {rawCommitments.map((c) => (
-                  <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line-soft p-3">
+                  <li
+                    key={c.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line-soft p-3"
+                  >
                     <div className="min-w-0">
                       <p className="truncate font-medium">{c.title}</p>
                       <p className="text-sm text-muted">
-                        {formatShortDay(c.startTime)} · {formatClock(c.startTime)} – {formatClock(c.endTime)}
+                        {formatShortDay(c.startTime)} ·{' '}
+                        {formatClock(c.startTime)} – {formatClock(c.endTime)}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <EditCommitmentModal commitment={c} />
                       <form action={deleteCommitment}>
                         <input type="hidden" name="commitmentId" value={c.id} />
-                        <button type="submit" aria-label={`Remove ${c.title}`} className={iconButtonDanger}>
+                        <button
+                          type="submit"
+                          aria-label={`Remove ${c.title}`}
+                          className={iconButtonDanger}
+                        >
                           <TrashIcon />
                         </button>
                       </form>
