@@ -39,14 +39,12 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ## Known limitations
 
-- There are no automated tests yet, so the scheduler has only been checked by hand.
 - The plan always starts at the beginning of the working day, even if it's already the afternoon.
 - "Completed today" uses a task's `updatedAt` timestamp, because there's no dedicated `completedAt` column yet.
 - Times are calculated in the server's timezone.
 
 ## Next steps
 
-- Unit tests for the scheduler and the analytics summary.
 - Start the plan from the current time instead of the start of the day.
 - A `completedAt` column on tasks.
 - A GitHub Actions workflow that runs type checking and linting on every pull request.
@@ -115,4 +113,5 @@ You'll need Node.js 24 (see `.nvmrc`) and Docker.
 npm run typecheck     # TypeScript
 npm run lint          # ESLint
 npm run format:check  # Prettier (npm run format to fix)
+npm test              # Vitest
 ```
