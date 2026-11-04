@@ -50,6 +50,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Start the plan from the current time instead of the start of the day.
 - A `completedAt` column on tasks.
 - A GitHub Actions workflow that runs type checking and linting on every pull request.
+- Projects for grouping tasks, and saved schedules. The `Project`, `Schedule` and `ScheduleBlock` models are already in the schema but aren't used yet.
 
 ## Tech stack
 
@@ -90,13 +91,10 @@ You'll need Node.js 24 (see `.nvmrc`) and Docker.
 
 3. Create a GitHub OAuth app under **GitHub → Settings → Developer settings → OAuth Apps**. Set the homepage URL to `http://localhost:3000` and the callback URL to `http://localhost:3000/api/auth/callback/github`.
 
-4. Create a `.env` file in the project root:
+4. Copy the example environment file, then fill in `AUTH_SECRET` and your OAuth app's client ID and secret:
 
-   ```env
-   DATABASE_URL="postgresql://postgres:password@localhost:5432/orbit?schema=public"
-   AUTH_SECRET="any long random string, e.g. the output of: openssl rand -base64 32"
-   AUTH_GITHUB_ID="your OAuth app's client ID"
-   AUTH_GITHUB_SECRET="your OAuth app's client secret"
+   ```bash
+   cp .env.example .env
    ```
 
 5. Create the database tables:
@@ -110,3 +108,11 @@ You'll need Node.js 24 (see `.nvmrc`) and Docker.
    ```bash
    npm run dev
    ```
+
+## Checks
+
+```bash
+npm run typecheck     # TypeScript
+npm run lint          # ESLint
+npm run format:check  # Prettier (npm run format to fix)
+```
