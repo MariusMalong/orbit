@@ -13,7 +13,7 @@ export async function logTimeEntry(formData: FormData) {
   const startTime = new Date(formData.get('startTime') as string);
   const endTime = new Date(formData.get('endTime') as string);
 
-  // 1. Fetch the task FIRST to verify you own it (Strict data isolation)
+  // 1. TimeEntry has no userId, so verify ownership through the parent task first
   const task = await prisma.task.findUnique({
     where: { id: taskId, userId: session.user.id },
   });
@@ -22,11 +22,11 @@ export async function logTimeEntry(formData: FormData) {
     throw new Error('Task not found or unauthorized');
   }
 
-  // 2. Create the audit log matching your exact Prisma schema
+  // 2. Record the focus session
   await prisma.timeEntry.create({
     data: {
       taskId,
-      duration: durationMinutes, // Mapped to 'duration' to match your schema
+      duration: durationMinutes,
       startTime,
       endTime,
     },
@@ -43,6 +43,6 @@ export async function logTimeEntry(formData: FormData) {
     },
   });
 
-  // Recalculate the dashboard timeline based on the new reality
+  // Re-render the dashboard so the schedule uses the new estimate
   revalidatePath('/');
 }

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { updateCommitment } from '@/app/actions/commitments';
 import { buttonPrimary, buttonSecondary, fieldInput, fieldLabel } from '@/components/ui-classes';
+import { formatForDateTimeInput } from '@/lib/format';
 
 interface EditCommitmentProps {
   commitment: {
@@ -12,12 +13,6 @@ interface EditCommitmentProps {
     endTime: Date;
   };
 }
-
-// Helper to format Date into datetime-local input string (YYYY-MM-DDTHH:mm)
-const formatForInput = (d: Date) => {
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
 
 export function EditCommitmentModal({ commitment }: EditCommitmentProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -70,7 +65,7 @@ export function EditCommitmentModal({ commitment }: EditCommitmentProps) {
                     type="datetime-local"
                     name="startTime"
                     id={`edit-commitment-start-${commitment.id}`}
-                    defaultValue={formatForInput(new Date(commitment.startTime))}
+                    defaultValue={formatForDateTimeInput(new Date(commitment.startTime))}
                     required
                     className={fieldInput}
                   />
@@ -81,7 +76,7 @@ export function EditCommitmentModal({ commitment }: EditCommitmentProps) {
                     type="datetime-local"
                     name="endTime"
                     id={`edit-commitment-end-${commitment.id}`}
-                    defaultValue={formatForInput(new Date(commitment.endTime))}
+                    defaultValue={formatForDateTimeInput(new Date(commitment.endTime))}
                     required
                     className={fieldInput}
                   />

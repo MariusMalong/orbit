@@ -44,7 +44,7 @@ export async function deleteTask(formData: FormData) {
   await prisma.task.deleteMany({
     where: {
       id: taskId,
-      userId: session.user.id, // CRITICAL SECURITY CHECK
+      userId: session.user.id, // Only delete tasks owned by this user
     },
   });
 

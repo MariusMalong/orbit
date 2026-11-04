@@ -23,14 +23,10 @@ export type ScheduleResult = {
     bumpedTaskIds: string[]; // Tasks that didn't fit in the day
 }
 
-// 3. THE ENGINE FUNCTION (Skeleton)
-/**
- * Deterministic scheduling algorithm.
- * Takes a list of tasks and fixed commitments, and calculates a daily schedule.
- */
+// 3. THE ENGINE
 
 /**
- * Helper: Calculates available gaps in the day by subtracting commitments.
+ * Returns the free gaps in the workday left after removing fixed commitments.
  */
 export function calculateFreeWindows(
     workDayStart: Date,
@@ -49,7 +45,7 @@ export function calculateFreeWindows(
 
     // 2. Walk the timeline
     for (const commitment of sortedCommitments) {
-        // If pointer is before the commitment starts, theres a free gap
+        // If pointer is before the commitment starts, there's a free gap
         if (currentTime < commitment.start) {
             freeWindows.push({
                 start: new Date(currentTime),
@@ -76,6 +72,11 @@ export function calculateFreeWindows(
     return freeWindows;
 }
 
+/**
+ * Deterministic scheduling algorithm: slots tasks into the free gaps of the
+ * workday in priority order, splitting a task across gaps when needed, and
+ * reports any task that does not fit as bumped.
+ */
 export function generateSchedule(
     tasks: SchedulableTask[],
     commitments: TimeWindow[],
