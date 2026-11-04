@@ -1,60 +1,110 @@
-# Orbit 🪐
-*Your day, in motion.*
+# Orbit
 
-Orbit is an adaptive personal productivity and scheduling application. 
+Orbit is a daily planner that builds your schedule for you. You give it tasks (with a time estimate and a priority), the events you can't move, and the hours you want to work. It fits the tasks into the gaps and redraws the plan whenever something changes.
 
-While most to-do apps act as rigid calendars, Orbit is being built to handle the reality of changing plans. The core goal is to build a deterministic scheduling engine that can recalculate a daily schedule when tasks overrun, preserving fixed commitments while automatically shifting lower-priority work.
+I'm building it to learn how to design a scheduling algorithm properly and to practise full-stack patterns in a real multi-user app. It's a work in progress.
 
-> **Note:** This project is currently under active development.
+## How the scheduler works
 
-## 🏗️ Current Status
-- [x] Application architecture and PostgreSQL database schema design.
-- [x] Dockerized local development environment.
-- [x] Delegated OAuth 2.0 authentication via Auth.js (GitHub provider).
-- [x] Secure Task CRUD operations using React Server Actions and Prisma.
-- [ ] **Next Up:** Developing the deterministic scheduling engine for task slotting and plan recovery.
+The core is a single pure function, `generateSchedule` in [`src/lib/engine/scheduler.ts`](src/lib/engine/scheduler.ts). It knows nothing about the database. It takes plain task and time-window objects and returns a list of blocks, which makes it easy to reason about and test on its own.
 
-## 🛠️ Tech Stack
-- **Framework:** Next.js (App Router, Server Components, Server Actions)
-- **Language:** TypeScript
-- **Database:** PostgreSQL (via Docker)
-- **ORM:** Prisma
-- **Authentication:** Auth.js v5 (NextAuth)
-- **Styling:** Tailwind CSS v4
+For each day it:
 
-## 🚀 Local Development Setup
+1. Starts from your working hours (for example 09:00–17:00).
+2. Cuts out your fixed commitments, leaving a list of free windows.
+3. Sorts tasks by priority, highest first.
+4. Walks through the free windows, placing each task in the earliest space available. A task that doesn't fit in one window is split across the next ones.
+5. Marks any task that still has time left over at the end of the day as "bumped", so the UI can warn you it won't fit.
 
-To run this project locally, you will need [Node.js](https://nodejs.org/) and [Docker](https://www.docker.com/) installed.
+The plan isn't stored. It's recalculated on every page load from the current data, so editing a task, adding a meeting or logging time changes it immediately.
 
-**1. Clone the repository**
-```bash
-git clone https://github.com/MariusMalong/orbit.git
-cd orbit
+## What works today
+
+- Sign in with GitHub.
+- Add, edit, complete and delete tasks. Each task has a title, a time estimate in minutes and a priority (low, medium or high).
+- Add, edit and delete fixed commitments, such as appointments or lectures.
+- Set your working hours separately for each day of the week.
+- See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks and a warning for anything that doesn't fit.
+- Use a focus timer on any task. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
+- A summary of the day: time focused, tasks completed versus planned, and time still scheduled.
+
+## Design decisions
+
+- **The engine is decoupled from the database.** Pages read from Prisma, convert the rows into small engine types (`SchedulableTask`, `TimeWindow`), and pass those in. The analytics summary (`src/lib/analytics/summarize.ts`) follows the same pattern.
+- **Every query is scoped to the signed-in user.** Server Actions take the user ID from the server-side session, never from the request, and filter every read and write by it. `TimeEntry` has no user column, so it's checked through its parent task, both when an entry is created and when entries are read.
+- **Time is stored in whole minutes.** Durations are integers, which avoids floating-point drift when times are added up and subtracted.
+- **No experimental React features.** I've left the React Compiler and Cache Components switched off, so state and memoization are handled by hand.
+
+## Known limitations
+
+- There are no automated tests yet, so the scheduler has only been checked by hand.
+- The plan always starts at the beginning of the working day, even if it's already the afternoon.
+- "Completed today" uses a task's `updatedAt` timestamp, because there's no dedicated `completedAt` column yet.
+- Times are calculated in the server's timezone.
+
+## Next steps
+
+- Unit tests for the scheduler and the analytics summary.
+- Start the plan from the current time instead of the start of the day.
+- A `completedAt` column on tasks.
+- A GitHub Actions workflow that runs type checking and linting on every pull request.
+
+## Tech stack
+
+- Next.js 16 (App Router, Server Components, Server Actions) with TypeScript
+- PostgreSQL, run locally in Docker
+- Prisma 6
+- Auth.js v5 with GitHub OAuth
+- Tailwind CSS v4
+
+## Project layout
+
+```
+prisma/schema.prisma        Database schema
+src/app/page.tsx            Dashboard: loads data, runs the engine, renders the page
+src/app/actions/            Server Actions for tasks, commitments, availability and time entries
+src/lib/engine/scheduler.ts The scheduling engine
+src/lib/analytics/          Daily summary calculations
+src/components/             UI components
 ```
 
-**2. Start the local database**
-Ensure Docker is running, then spin up the PostgreSQL container:
-```bash
-docker run --name orbit-db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=orbit -p 5432:5432 -d postgres:15-alpine
-```
+## Running it locally
 
-**3. Set up environment variables**
-Create a `.env` file in the root directory:
-```env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/orbit?schema=public"
-AUTH_SECRET="generate_a_random_32_character_string"
-AUTH_GITHUB_ID="your_github_oauth_client_id"
-AUTH_GITHUB_SECRET="your_github_oauth_client_secret"
-```
+You'll need Node.js 24 (see `.nvmrc`) and Docker.
 
-**4. Install dependencies and sync the database**
-```bash
-npm install
-npx prisma db push
-```
+1. Clone the repo and install dependencies:
 
-**5. Start the development server**
-```bash
-npm run dev
-```
-Visit `http://localhost:3000` to view the application.
+   ```bash
+   git clone https://github.com/MariusMalong/orbit.git
+   cd orbit
+   npm install
+   ```
+
+2. Start a PostgreSQL container:
+
+   ```bash
+   docker run --name orbit-db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=orbit -p 5432:5432 -d postgres:15-alpine
+   ```
+
+3. Create a GitHub OAuth app under **GitHub → Settings → Developer settings → OAuth Apps**. Set the homepage URL to `http://localhost:3000` and the callback URL to `http://localhost:3000/api/auth/callback/github`.
+
+4. Create a `.env` file in the project root:
+
+   ```env
+   DATABASE_URL="postgresql://postgres:password@localhost:5432/orbit?schema=public"
+   AUTH_SECRET="any long random string, e.g. the output of: openssl rand -base64 32"
+   AUTH_GITHUB_ID="your OAuth app's client ID"
+   AUTH_GITHUB_SECRET="your OAuth app's client secret"
+   ```
+
+5. Create the database tables:
+
+   ```bash
+   npx prisma db push
+   ```
+
+6. Start the dev server and open http://localhost:3000:
+
+   ```bash
+   npm run dev
+   ```
