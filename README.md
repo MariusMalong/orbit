@@ -2,6 +2,8 @@
 
 Orbit is a daily planner that builds your schedule for you. You give it tasks (with a time estimate and a priority), the events you can't move, and the hours you want to work. It fits the tasks into the gaps and redraws the plan whenever something changes.
 
+![Orbit dashboard showing today's plan on an hour grid](docs/images/dashboard.png)
+
 I'm building it to learn how to design a scheduling algorithm properly and to practise full-stack patterns in a real multi-user app. It's a work in progress.
 
 ## How the scheduler works
