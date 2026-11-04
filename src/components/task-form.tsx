@@ -1,56 +1,52 @@
 import { createTask } from '@/app/actions/task';
+import { buttonAccent, fieldInput, fieldLabel, panel, panelTitle } from '@/components/ui-classes';
 
 export function TaskForm() {
   return (
-    <form action={createTask} className="flex flex-col gap-4 rounded-lg border border-slate-800 bg-slate-900 p-6">
-      <h2 className="text-lg font-semibold text-white">Add a New Task</h2>
-      
-      <div className="flex flex-col gap-2">
-        <label htmlFor="title" className="text-sm font-medium text-slate-400">Task Title</label>
-        <input 
-          type="text" 
-          name="title" 
-          id="title" 
-          required 
-          placeholder="e.g., Write Database Schema"
-          className="rounded-md border border-slate-700 bg-slate-950 p-2.5 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" 
-        />
-      </div>
+    <section aria-labelledby="new-task-heading" className={panel}>
+      <h2 id="new-task-heading" className={`${panelTitle} mb-3`}>New task</h2>
 
-      <div className="flex gap-4">
-        <div className="flex w-1/2 flex-col gap-2">
-          <label htmlFor="durationEstimate" className="text-sm font-medium text-slate-400">Duration (Mins)</label>
-          <input 
-            type="number" 
-            name="durationEstimate" 
-            id="durationEstimate" 
-            required 
-            min="1" 
-            placeholder="90"
-            className="rounded-md border border-slate-700 bg-slate-950 p-2.5 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" 
+      <form action={createTask} className="flex flex-col gap-3">
+        <label htmlFor="task-title" className={fieldLabel}>
+          Title
+          <input
+            type="text"
+            name="title"
+            id="task-title"
+            required
+            placeholder="e.g. Plan next week's meals"
+            className={fieldInput}
           />
+        </label>
+
+        <div className="flex gap-3">
+          <label htmlFor="task-duration" className={`${fieldLabel} flex-1`}>
+            Minutes
+            <input
+              type="number"
+              name="durationEstimate"
+              id="task-duration"
+              required
+              min="1"
+              placeholder="45"
+              className={fieldInput}
+            />
+          </label>
+
+          <label htmlFor="task-priority" className={`${fieldLabel} flex-1`}>
+            Priority
+            <select name="priority" id="task-priority" defaultValue="2" className={fieldInput}>
+              <option value="1">Low</option>
+              <option value="2">Medium</option>
+              <option value="3">High</option>
+            </select>
+          </label>
         </div>
 
-        <div className="flex w-1/2 flex-col gap-2">
-          <label htmlFor="priority" className="text-sm font-medium text-slate-400">Priority</label>
-          <select 
-            name="priority" 
-            id="priority" 
-            className="rounded-md border border-slate-700 bg-slate-950 p-2.5 text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          >
-            <option value="1">1 - Low</option>
-            <option value="2">2 - Medium</option>
-            <option value="3">3 - High</option>
-          </select>
-        </div>
-      </div>
-
-      <button 
-        type="submit" 
-        className="mt-2 rounded-md bg-emerald-600 px-4 py-2.5 font-medium text-white transition hover:bg-emerald-500"
-      >
-        Create Task
-      </button>
-    </form>
+        <button type="submit" className={buttonAccent}>
+          Add to plan
+        </button>
+      </form>
+    </section>
   );
 }

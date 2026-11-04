@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { updateCommitment } from '@/app/actions/commitments';
+import { buttonPrimary, buttonSecondary, fieldInput, fieldLabel } from '@/components/ui-classes';
 
 interface EditCommitmentProps {
   commitment: {
@@ -12,87 +13,93 @@ interface EditCommitmentProps {
   };
 }
 
+// Helper to format Date into datetime-local input string (YYYY-MM-DDTHH:mm)
+const formatForInput = (d: Date) => {
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
 export function EditCommitmentModal({ commitment }: EditCommitmentProps) {
   const [isOpen, setIsOpen] = useState(false);
-
-  // Helper to format Date into datetime-local input string (YYYY-MM-DDTHH:mm)
-  const formatForInput = (d: Date) => {
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
-
-  if (!isOpen) {
-    return (
-      <button 
-        onClick={() => setIsOpen(true)} 
-        className="text-xs font-medium text-slate-400 hover:text-amber-400"
-      >
-        Edit
-      </button>
-    );
-  }
+  const headingId = `edit-commitment-heading-${commitment.id}`;
 
   return (
-    <div className="mt-2 rounded-md border border-slate-700 bg-slate-950 p-3">
-      <form 
-        action={async (formData) => {
-          await updateCommitment(formData);
-          setIsOpen(false);
-        }} 
-        className="flex flex-col gap-3"
-      >
-        <input type="hidden" name="commitmentId" value={commitment.id} />
-        
-        <div>
-          <label className="text-xs font-medium text-slate-400">Event Title</label>
-          <input 
-            type="text" 
-            name="title" 
-            defaultValue={commitment.title} 
-            required 
-            className="w-full rounded border border-slate-800 bg-slate-900 p-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
-          />
-        </div>
+    <>
+      <button type="button" onClick={() => setIsOpen(true)} className={buttonSecondary}>
+        Edit
+      </button>
 
-        <div className="flex gap-2">
-          <div className="w-1/2">
-            <label className="text-xs font-medium text-slate-400">Start Time</label>
-            <input 
-              type="datetime-local" 
-              name="startTime" 
-              defaultValue={formatForInput(new Date(commitment.startTime))} 
-              required 
-              className="w-full rounded border border-slate-800 bg-slate-900 p-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
-            />
-          </div>
-          <div className="w-1/2">
-            <label className="text-xs font-medium text-slate-400">End Time</label>
-            <input 
-              type="datetime-local" 
-              name="endTime" 
-              defaultValue={formatForInput(new Date(commitment.endTime))} 
-              required 
-              className="w-full rounded border border-slate-800 bg-slate-900 p-1.5 text-xs text-white focus:outline-none focus:border-amber-500"
-            />
-          </div>
-        </div>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+          onKeyDown={(e) => e.key === 'Escape' && setIsOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={headingId}
+            className="w-full max-w-md rounded-xl border border-line bg-surface p-6 shadow-xl"
+          >
+            <h2 id={headingId} className="mb-4 font-display text-lg font-semibold">Edit commitment</h2>
+            <form
+              action={async (formData) => {
+                await updateCommitment(formData);
+                setIsOpen(false);
+              }}
+              className="flex flex-col gap-3"
+            >
+              <input type="hidden" name="commitmentId" value={commitment.id} />
 
-        <div className="flex justify-end gap-2 pt-1">
-          <button 
-            type="button" 
-            onClick={() => setIsOpen(false)} 
-            className="text-xs text-slate-400 hover:text-slate-200"
-          >
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            className="rounded bg-amber-500/20 border border-amber-500/30 px-2.5 py-1 text-xs font-medium text-amber-300 hover:bg-amber-500/30"
-          >
-            Save
-          </button>
+              <label htmlFor={`edit-commitment-title-${commitment.id}`} className={fieldLabel}>
+                Event
+                <input
+                  type="text"
+                  name="title"
+                  id={`edit-commitment-title-${commitment.id}`}
+                  defaultValue={commitment.title}
+                  required
+                  autoFocus
+                  className={fieldInput}
+                />
+              </label>
+
+              <div className="flex flex-wrap gap-3">
+                <label htmlFor={`edit-commitment-start-${commitment.id}`} className={`${fieldLabel} flex-[1_1_160px]`}>
+                  Starts
+                  <input
+                    type="datetime-local"
+                    name="startTime"
+                    id={`edit-commitment-start-${commitment.id}`}
+                    defaultValue={formatForInput(new Date(commitment.startTime))}
+                    required
+                    className={fieldInput}
+                  />
+                </label>
+                <label htmlFor={`edit-commitment-end-${commitment.id}`} className={`${fieldLabel} flex-[1_1_160px]`}>
+                  Ends
+                  <input
+                    type="datetime-local"
+                    name="endTime"
+                    id={`edit-commitment-end-${commitment.id}`}
+                    defaultValue={formatForInput(new Date(commitment.endTime))}
+                    required
+                    className={fieldInput}
+                  />
+                </label>
+              </div>
+
+              <div className="mt-2 flex justify-end gap-2">
+                <button type="button" onClick={() => setIsOpen(false)} className={buttonSecondary}>
+                  Cancel
+                </button>
+                <button type="submit" className={buttonPrimary}>
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </form>
-    </div>
+      )}
+    </>
   );
 }
