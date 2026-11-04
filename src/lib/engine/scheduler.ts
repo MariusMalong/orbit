@@ -45,6 +45,12 @@ export function calculateFreeWindows(
 
   // 2. Walk the timeline
   for (const commitment of sortedCommitments) {
+    // Commitments are sorted, so once one starts at or after the end of the
+    // workday, none of the rest can affect today's windows. Stopping here also
+    // stops a gap from stretching past workDayEnd up to an evening (or
+    // next-day) commitment; step 3 closes the last window at workDayEnd.
+    if (commitment.start >= workDayEnd) break;
+
     // If pointer is before the commitment starts, there's a free gap
     if (currentTime < commitment.start) {
       freeWindows.push({
