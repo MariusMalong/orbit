@@ -6,7 +6,7 @@ Orbit is a daily planner that builds your schedule for you. You give it tasks (w
 
 **Try it: [use-orbitplanner.vercel.app](https://use-orbitplanner.vercel.app)**
 
-You sign in with GitHub. Orbit only reads your public profile and email address, and each account only sees its own data. To see the scheduler at work, add a few tasks with different priorities and a commitment in the middle of the day, then start a focus timer on one of them.
+Click **Try the demo** to get your own temporary account, filled with a day of sample tasks and commitments. There's no sign-up, and the account is deleted after 24 hours. Try starting a focus timer, moving a commitment or changing your hours, and watch the plan redraw. You can also sign in with GitHub (Orbit only reads your public profile and email address).
 
 ![Orbit dashboard showing today's plan on an hour grid](docs/images/dashboard.png)
 
@@ -28,7 +28,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ## What works today
 
-- Sign in with GitHub.
+- Sign in with GitHub, or try a demo account with sample data.
 - Add, edit, complete and delete tasks. Each task has a title, a time estimate in minutes and a priority (low, medium or high).
 - Add, edit and delete fixed commitments, such as appointments or lectures.
 - Set your working hours separately for each day of the week.
@@ -41,6 +41,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - **The engine is decoupled from the database.** Pages read from Prisma, convert the rows into small engine types (`SchedulableTask`, `TimeWindow`), and pass those in. The analytics summary (`src/lib/analytics/summarize.ts`) follows the same pattern.
 - **Every query is scoped to the signed-in user.** Server Actions take the user ID from the server-side session, never from the request, and filter every read and write by it. `TimeEntry` has no user column, so it's checked through its parent task, both when an entry is created and when entries are read.
 - **Time is stored in whole minutes.** Durations are integers, which avoids floating-point drift when times are added up and subtracted.
+- **Demo accounts are ordinary users.** "Try the demo" creates a user flagged `isDemo`, fills it from a pure seed function, and creates an Auth.js database session for it. Each visitor gets their own account, and everything else (including the per-user scoping) works exactly as for a GitHub user. Demo accounts older than 24 hours are deleted the next time someone starts a demo.
 - **No experimental React features.** I've left the React Compiler and Cache Components switched off, so state and memoization are handled by hand.
 
 ## Known limitations
@@ -48,6 +49,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - The plan always starts at the beginning of the working day, even if it's already the afternoon.
 - "Completed today" uses a task's `updatedAt` timestamp, because there's no dedicated `completedAt` column yet.
 - Times are calculated in the server's timezone.
+- Starting a demo isn't rate-limited, so the only cap on demo accounts is the 24-hour cleanup.
 
 ## Next steps
 
@@ -80,6 +82,7 @@ src/app/page.tsx            Dashboard: loads data, runs the engine, renders the 
 src/app/actions/            Server Actions for tasks, commitments, availability and time entries
 src/lib/engine/scheduler.ts The scheduling engine
 src/lib/analytics/          Daily summary calculations
+src/lib/demo/               Sample data for demo accounts
 src/components/             UI components
 ```
 
