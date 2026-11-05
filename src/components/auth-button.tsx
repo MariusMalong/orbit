@@ -1,22 +1,12 @@
-import { auth, signIn, signOut } from '@/auth';
-import { buttonPrimary, buttonSecondary } from '@/components/ui-classes';
+import { auth, signOut } from '@/auth';
+import { buttonSecondary } from '@/components/ui-classes';
 
 export async function AuthButton() {
   const session = await auth();
 
+  // Signed-out visitors always land on /signin, which has the sign-in buttons.
   if (!session?.user) {
-    return (
-      <form
-        action={async () => {
-          'use server';
-          await signIn('github');
-        }}
-      >
-        <button type="submit" className={buttonPrimary}>
-          Sign in with GitHub
-        </button>
-      </form>
-    );
+    return null;
   }
 
   return (
@@ -29,6 +19,11 @@ export async function AuthButton() {
         />
       )}
       <span className="text-sm text-muted">{session.user.name}</span>
+      {session.user.isDemo && (
+        <span className="rounded-full bg-accent-tint px-2 py-0.5 text-xs font-medium">
+          Demo
+        </span>
+      )}
       <form
         action={async () => {
           'use server';

@@ -55,7 +55,7 @@ export default async function Home() {
   const session = await auth();
 
   if (!session?.user) {
-    redirect('/api/auth/signin');
+    redirect('/signin');
   }
 
   const today = new Date();
@@ -167,7 +167,11 @@ export default async function Home() {
           <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
             {todayLabel}
           </h1>
-          <p className="mt-1 text-muted">Welcome back, {session.user.name}</p>
+          <p className="mt-1 text-muted">
+            {session.user.isDemo
+              ? "You're in a demo account filled with sample data. Change anything you like: it's deleted after 24 hours."
+              : `Welcome back, ${session.user.name}`}
+          </p>
         </div>
         <StatsRow summary={summary} />
       </div>

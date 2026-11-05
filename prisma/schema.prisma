@@ -25,7 +25,11 @@ model User {
   commitments    FixedCommitment[]
   schedules      Schedule[]
   availabilities Availability[]
+  // Temporary accounts created by "Try the demo", deleted after 24 hours
+  isDemo         Boolean           @default(false)
   createdAt      DateTime          @default(now())
+
+  @@index([isDemo, createdAt])
 }
 
 model Account {
