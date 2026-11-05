@@ -1,19 +1,24 @@
 // Display formatting helpers. Data stays as Dates and integer minutes; these only render it.
 
+// Server components pass the visitor's timezone; without one, the runtime's
+// own timezone is used (the browser's, in client components).
+
 /** 24-hour clock time, e.g. "09:00". */
-export function formatClock(date: Date): string {
+export function formatClock(date: Date, timeZone?: string): string {
   return date.toLocaleTimeString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
+    timeZone,
   });
 }
 
 /** Short day label, e.g. "Wed 4 Nov". */
-export function formatShortDay(date: Date): string {
+export function formatShortDay(date: Date, timeZone?: string): string {
   return date.toLocaleDateString('en-GB', {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
+    timeZone,
   });
 }
 

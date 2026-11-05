@@ -5,6 +5,7 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { buildDemoData } from '@/lib/demo/seed';
+import { getUserTimeZone } from '@/lib/time/user-timezone';
 
 // Demo accounts, and their sessions, last this long.
 const DEMO_LIFETIME_MS = 24 * 60 * 60 * 1000;
@@ -30,7 +31,7 @@ export async function startDemo() {
     },
   });
 
-  const { tasks, commitments } = buildDemoData(now);
+  const { tasks, commitments } = buildDemoData(now, await getUserTimeZone());
   const sessionToken = randomBytes(32).toString('hex');
   const expires = new Date(now.getTime() + DEMO_LIFETIME_MS);
 

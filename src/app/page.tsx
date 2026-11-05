@@ -18,6 +18,13 @@ import { FocusTimer } from '@/components/focus-timer';
 import { StatsRow } from '@/components/stats-row';
 import { summarizeDay } from '@/lib/analytics/summarize';
 import { formatClock, formatShortDay, PRIORITY_LABELS } from '@/lib/format';
+import { getUserTimeZone } from '@/lib/time/user-timezone';
+import {
+  atZonedTime,
+  getZonedParts,
+  startOfNextZonedDay,
+  startOfZonedDay,
+} from '@/lib/time/zoned';
 import {
   buttonSecondary,
   iconButtonDanger,
@@ -58,8 +65,11 @@ export default async function Home() {
     redirect('/signin');
   }
 
+  // "Today" and the workday hours are in the visitor's timezone, not the
+  // server's (Vercel runs in UTC).
+  const timeZone = await getUserTimeZone();
   const today = new Date();
-  const currentDayOfWeek = today.getDay(); // 0 - 6
+  const currentDayOfWeek = getZonedParts(today, timeZone).weekday; // 0 - 6
 
   // 1. Fetch data from database
   // IN_PROGRESS tasks (partially worked via the Focus Timer) still have remaining
@@ -88,15 +98,9 @@ export default async function Home() {
   const startTimeStr = availability?.startTime || '09:00';
   const endTimeStr = availability?.endTime || '17:00';
 
-  // Parse availability strings into today's Date objects
-  const [startHour, startMin] = startTimeStr.split(':').map(Number);
-  const [endHour, endMin] = endTimeStr.split(':').map(Number);
-
-  const workDayStart = new Date(today);
-  workDayStart.setHours(startHour, startMin, 0, 0);
-
-  const workDayEnd = new Date(today);
-  workDayEnd.setHours(endHour, endMin, 0, 0);
+  // Turn the "HH:MM" availability strings into today's instants
+  const workDayStart = atZonedTime(today, startTimeStr, timeZone);
+  const workDayEnd = atZonedTime(today, endTimeStr, timeZone);
 
   // 2. Map Prisma data to Engine types
   const schedulableTasks: SchedulableTask[] = rawTasks.map((t) => ({
@@ -120,10 +124,8 @@ export default async function Home() {
   );
 
   // 4. Analytics: aggregate today's executed time and task completion
-  const startOfToday = new Date(today);
-  startOfToday.setHours(0, 0, 0, 0);
-  const startOfTomorrow = new Date(startOfToday);
-  startOfTomorrow.setDate(startOfToday.getDate() + 1);
+  const startOfToday = startOfZonedDay(today, timeZone);
+  const startOfTomorrow = startOfNextZonedDay(today, timeZone);
 
   const [todaysEntries, completedTodayCount] = await Promise.all([
     // TimeEntry has no userId column, so ownership is enforced through the
@@ -157,6 +159,7 @@ export default async function Home() {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
+    timeZone,
   });
 
   return (
@@ -191,6 +194,7 @@ export default async function Home() {
             }))}
             workDayStart={workDayStart}
             workDayEnd={workDayEnd}
+            timeZone={timeZone}
             headerAction={
               <WorkdaySettings
                 dayOfWeek={currentDayOfWeek}
@@ -284,8 +288,9 @@ export default async function Home() {
                     <div className="min-w-0">
                       <p className="truncate font-medium">{c.title}</p>
                       <p className="text-sm text-muted">
-                        {formatShortDay(c.startTime)} ·{' '}
-                        {formatClock(c.startTime)} – {formatClock(c.endTime)}
+                        {formatShortDay(c.startTime, timeZone)} ·{' '}
+                        {formatClock(c.startTime, timeZone)} –{' '}
+                        {formatClock(c.endTime, timeZone)}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5">

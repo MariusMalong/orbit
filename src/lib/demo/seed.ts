@@ -1,3 +1,5 @@
+import { atZonedTime } from '@/lib/time/zoned';
+
 // Sample data for "Try the demo" accounts.
 //
 // Pure and deterministic: given the current time it returns plain objects, and
@@ -31,17 +33,13 @@ export type DemoData = {
   commitments: DemoCommitment[];
 };
 
-// A time on the same calendar day as `day`, in the server's timezone
-// (the dashboard builds the workday the same way).
-function on(day: Date, hhmm: string): Date {
-  const [hours, minutes] = hhmm.split(':').map(Number);
-  const date = new Date(day);
-  date.setHours(hours, minutes, 0, 0);
-  return date;
-}
-
-function entry(day: Date, start: string, minutes: number): DemoTimeEntry {
-  const startTime = on(day, start);
+function entry(
+  day: Date,
+  start: string,
+  minutes: number,
+  timeZone: string
+): DemoTimeEntry {
+  const startTime = atZonedTime(day, start, timeZone);
   return {
     startTime,
     endTime: new Date(startTime.getTime() + minutes * 60_000),
@@ -49,22 +47,28 @@ function entry(day: Date, start: string, minutes: number): DemoTimeEntry {
   };
 }
 
-export function buildDemoData(now: Date): DemoData {
+/**
+ * A day of sample data for `now`'s date in the visitor's `timeZone`, which is
+ * also how the dashboard builds the workday.
+ */
+export function buildDemoData(now: Date, timeZone: string): DemoData {
+  const on = (hhmm: string) => atZonedTime(now, hhmm, timeZone);
+
   const commitments: DemoCommitment[] = [
     {
       title: 'Team check-in',
-      startTime: on(now, '09:30'),
-      endTime: on(now, '10:00'),
+      startTime: on('09:30'),
+      endTime: on('10:00'),
     },
     {
       title: 'Lunch with Sam',
-      startTime: on(now, '12:30'),
-      endTime: on(now, '13:30'),
+      startTime: on('12:30'),
+      endTime: on('13:30'),
     },
     {
       title: 'Dentist appointment',
-      startTime: on(now, '15:30'),
-      endTime: on(now, '16:30'),
+      startTime: on('15:30'),
+      endTime: on('16:30'),
     },
   ];
 
@@ -75,7 +79,7 @@ export function buildDemoData(now: Date): DemoData {
       priority: 3,
       durationEstimate: 105,
       status: 'IN_PROGRESS',
-      timeEntries: [entry(now, '07:30', 45)],
+      timeEntries: [entry(now, '07:30', 45, timeZone)],
     },
     {
       title: "Prepare slides for Thursday's review",
@@ -118,7 +122,7 @@ export function buildDemoData(now: Date): DemoData {
       priority: 2,
       durationEstimate: 0,
       status: 'COMPLETED',
-      timeEntries: [entry(now, '08:15', 15)],
+      timeEntries: [entry(now, '08:15', 15, timeZone)],
     },
   ];
 
