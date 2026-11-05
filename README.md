@@ -1,6 +1,12 @@
 # Orbit
 
+[![CI](https://github.com/MariusMalong/orbit/actions/workflows/ci.yml/badge.svg)](https://github.com/MariusMalong/orbit/actions/workflows/ci.yml)
+
 Orbit is a daily planner that builds your schedule for you. You give it tasks (with a time estimate and a priority), the events you can't move, and the hours you want to work. It fits the tasks into the gaps and redraws the plan whenever something changes.
+
+**Try it: [use-orbitplanner.vercel.app](https://use-orbitplanner.vercel.app)**
+
+You sign in with GitHub. Orbit only reads your public profile and email address, and each account only sees its own data. To see the scheduler at work, add a few tasks with different priorities and a commitment in the middle of the day, then start a focus timer on one of them.
 
 ![Orbit dashboard showing today's plan on an hour grid](docs/images/dashboard.png)
 
@@ -52,10 +58,18 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 ## Tech stack
 
 - Next.js 16 (App Router, Server Components, Server Actions) with TypeScript
-- PostgreSQL, run locally in Docker
-- Prisma 6
+- PostgreSQL: [Neon](https://neon.com) in production, Docker locally
+- Prisma 6, with migrations
 - Auth.js v5 with GitHub OAuth
 - Tailwind CSS v4
+- Vitest for the engine and analytics tests
+- Hosted on Vercel, with CI on GitHub Actions
+
+## Deployment
+
+The live site runs on Vercel and deploys every push to `main`. The build runs `prisma migrate deploy` before `next build`, so schema changes go out with the code that needs them. The database is a Neon Postgres instance in Sydney. The app connects through Neon's connection pooler, and migrations use the direct connection (`DIRECT_URL`).
+
+Pull requests get their own Vercel preview URL, and CI runs the checks below on each one.
 
 ## Project layout
 
