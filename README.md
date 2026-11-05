@@ -62,6 +62,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ```
 prisma/schema.prisma        Database schema
+prisma/migrations/          SQL migrations, applied on deploy
 src/app/page.tsx            Dashboard: loads data, runs the engine, renders the page
 src/app/actions/            Server Actions for tasks, commitments, availability and time entries
 src/lib/engine/scheduler.ts The scheduling engine
@@ -98,7 +99,7 @@ You'll need Node.js 24 (see `.nvmrc`) and Docker.
 5. Create the database tables:
 
    ```bash
-   npx prisma db push
+   npx prisma migrate dev
    ```
 
 6. Start the dev server and open http://localhost:3000:
