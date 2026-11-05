@@ -47,7 +47,6 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 - Start the plan from the current time instead of the start of the day.
 - A `completedAt` column on tasks.
-- A GitHub Actions workflow that runs type checking and linting on every pull request.
 - Projects for grouping tasks, and saved schedules. The `Project`, `Schedule` and `ScheduleBlock` models are already in the schema but aren't used yet.
 
 ## Tech stack
