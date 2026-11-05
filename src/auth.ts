@@ -11,11 +11,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientSecret: process.env.AUTH_GITHUB_SECRET,
     }),
   ],
+  pages: {
+    // Our own page, with the "Try the demo" button next to GitHub sign-in
+    signIn: '/signin',
+  },
   callbacks: {
     // Ensure the User ID is attached to the session object
     session({ session, user }) {
       if (session.user) {
         session.user.id = user.id;
+        session.user.isDemo = user.isDemo;
       }
       return session;
     },
