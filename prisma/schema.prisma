@@ -6,7 +6,8 @@ datasource db {
   provider = "postgresql"
   url       = env("DATABASE_URL")
   // Migrations need a direct (non-pooled) connection. Locally this is the
-  // same URL as DATABASE_URL; on Supabase it's the session pooler on port 5432.
+  // same URL as DATABASE_URL; on Neon it's the connection string without
+  // "-pooler" in the host.
   directUrl = env("DIRECT_URL")
 }
 

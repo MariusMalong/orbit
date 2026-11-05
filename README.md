@@ -115,3 +115,5 @@ npm run lint          # ESLint
 npm run format:check  # Prettier (npm run format to fix)
 npm test              # Vitest
 ```
+
+GitHub Actions runs all of these, plus a production build, on every push to `main` and every pull request.
