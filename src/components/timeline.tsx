@@ -1,5 +1,6 @@
 import { ScheduleBlockResult, SchedulableTask } from '@/lib/engine/scheduler';
 import { formatClock } from '@/lib/format';
+import { getZonedParts } from '@/lib/time/zoned';
 import { panel } from '@/components/ui-classes';
 
 interface TimelineCommitment {
@@ -16,6 +17,7 @@ interface TimelineProps {
   commitments: TimelineCommitment[];
   workDayStart: Date;
   workDayEnd: Date;
+  timeZone: string; // Visitor's timezone, for hour labels and times
   headerAction?: React.ReactNode;
 }
 
@@ -32,6 +34,7 @@ export function Timeline({
   commitments,
   workDayStart,
   workDayEnd,
+  timeZone,
   headerAction,
 }: TimelineProps) {
   // Quick lookup map to resolve task titles and priorities by ID
@@ -40,13 +43,16 @@ export function Timeline({
     .map((id) => taskMap.get(id))
     .filter(Boolean) as SchedulableTask[];
 
-  // The grid snaps outward to whole hours so every hour line gets a label.
-  const gridStart = new Date(workDayStart);
-  gridStart.setMinutes(0, 0, 0);
-  const gridEnd = new Date(workDayEnd);
-  if (gridEnd.getMinutes() > 0) {
-    gridEnd.setHours(gridEnd.getHours() + 1, 0, 0, 0);
-  }
+  // The grid snaps outward to whole hours (in the visitor's timezone, which
+  // may be offset by half an hour) so every hour line gets a label.
+  const startMinute = getZonedParts(workDayStart, timeZone).minute;
+  const gridStart = new Date(
+    workDayStart.getTime() - startMinute * MS_PER_MINUTE
+  );
+  const endMinute = getZonedParts(workDayEnd, timeZone).minute;
+  const gridEnd = new Date(
+    workDayEnd.getTime() + (endMinute > 0 ? 60 - endMinute : 0) * MS_PER_MINUTE
+  );
   const hourCount = Math.max(
     1,
     Math.round((gridEnd.getTime() - gridStart.getTime()) / MS_PER_HOUR)
@@ -129,7 +135,7 @@ export function Timeline({
             style={{ top: offsetPx(mark) }}
           >
             <span className="-mt-2 w-12 shrink-0 text-right text-xs text-muted tabular-nums">
-              {formatClock(mark)}
+              {formatClock(mark, timeZone)}
             </span>
             <div className="flex-1 border-t border-line-soft" />
           </div>
@@ -146,7 +152,8 @@ export function Timeline({
           >
             <p className="truncate text-sm font-medium text-ink-2">{c.title}</p>
             <p className="text-xs text-muted">
-              {formatClock(c.start)} – {formatClock(c.end)} · Fixed
+              {formatClock(c.start, timeZone)} – {formatClock(c.end, timeZone)}{' '}
+              · Fixed
             </p>
           </div>
         ))}
@@ -173,8 +180,8 @@ export function Timeline({
                 <p className="truncate text-sm font-semibold">{task.title}</p>
                 {!isCompact && (
                   <p className="text-xs text-ink-2">
-                    {formatClock(block.startTime)} –{' '}
-                    {formatClock(block.endTime)} · {minutes} min
+                    {formatClock(block.startTime, timeZone)} –{' '}
+                    {formatClock(block.endTime, timeZone)} · {minutes} min
                   </p>
                 )}
               </div>

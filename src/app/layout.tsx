@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { AuthButton } from '@/components/auth-button';
+import { TimezoneSync } from '@/components/timezone-sync';
 
 // Exposed as CSS variables and mapped to font-sans / font-display in globals.css.
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -24,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body className="flex min-h-screen flex-col bg-canvas font-sans text-ink antialiased">
+        <TimezoneSync />
         <header className="sticky top-0 z-50 border-b border-line bg-surface">
           <div className="mx-auto flex min-h-16 w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-4 md:px-6">
             <div className="flex items-center gap-2.5">

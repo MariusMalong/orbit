@@ -40,6 +40,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 - **The engine is decoupled from the database.** Pages read from Prisma, convert the rows into small engine types (`SchedulableTask`, `TimeWindow`), and pass those in. The analytics summary (`src/lib/analytics/summarize.ts`) follows the same pattern.
 - **Every query is scoped to the signed-in user.** Server Actions take the user ID from the server-side session, never from the request, and filter every read and write by it. `TimeEntry` has no user column, so it's checked through its parent task, both when an entry is created and when entries are read.
+- **Times are stored as instants and planned in the visitor's timezone.** The server runs in UTC, so "today", "09:00" and "Friday" are worked out in the visitor's own timezone by small `Intl`-based helpers (`src/lib/time/zoned.ts`), which are tested across Melbourne's daylight-saving changes. The browser saves its timezone in a cookie. Until it has, Vercel's IP-based guess is used.
 - **Time is stored in whole minutes.** Durations are integers, which avoids floating-point drift when times are added up and subtracted.
 - **Demo accounts are ordinary users.** "Try the demo" creates a user flagged `isDemo`, fills it from a pure seed function, and creates an Auth.js database session for it. Each visitor gets their own account, and everything else (including the per-user scoping) works exactly as for a GitHub user. Demo accounts older than 24 hours are deleted the next time someone starts a demo.
 - **No experimental React features.** I've left the React Compiler and Cache Components switched off, so state and memoization are handled by hand.
@@ -48,7 +49,6 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 - The plan always starts at the beginning of the working day, even if it's already the afternoon.
 - "Completed today" uses a task's `updatedAt` timestamp, because there's no dedicated `completedAt` column yet.
-- Times are calculated in the server's timezone.
 - Starting a demo isn't rate-limited, so the only cap on demo accounts is the 24-hour cleanup.
 
 ## Next steps

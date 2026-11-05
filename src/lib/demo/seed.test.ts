@@ -1,14 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { buildDemoData } from './seed';
 import { generateSchedule } from '../engine/scheduler';
+import { atZonedTime } from '../time/zoned';
 
-const now = new Date('2026-11-05T11:00:00');
-const at = (hhmm: string) => new Date(`2026-11-05T${hhmm}:00`);
+// A Melbourne visitor at 11:00 on Friday 6 November, while the server (UTC)
+// is still on Thursday. The demo must use the visitor's day.
+const timeZone = 'Australia/Melbourne';
+const now = new Date('2026-11-06T00:00:00Z');
+const at = (hhmm: string) => atZonedTime(now, hhmm, timeZone);
 
 // Run the demo data through the real engine with the dashboard's default
 // 09:00–17:00 workday, the same way page.tsx does.
 function scheduleDemo() {
-  const { tasks, commitments } = buildDemoData(now);
+  const { tasks, commitments } = buildDemoData(now, timeZone);
   const active = tasks.filter((t) => t.status !== 'COMPLETED');
 
   const result = generateSchedule(
@@ -28,7 +32,7 @@ function scheduleDemo() {
 
 describe('buildDemoData', () => {
   it('places every commitment inside the default workday, on the same day', () => {
-    const { commitments } = buildDemoData(now);
+    const { commitments } = buildDemoData(now, timeZone);
 
     for (const c of commitments) {
       expect(c.startTime.getTime()).toBeGreaterThanOrEqual(
@@ -59,7 +63,7 @@ describe('buildDemoData', () => {
   });
 
   it('gives logged time entries a duration that matches their start and end', () => {
-    const { tasks } = buildDemoData(now);
+    const { tasks } = buildDemoData(now, timeZone);
 
     for (const entry of tasks.flatMap((t) => t.timeEntries)) {
       const minutes =
@@ -69,7 +73,7 @@ describe('buildDemoData', () => {
   });
 
   it('includes a completed task so the daily summary is not empty', () => {
-    const { tasks } = buildDemoData(now);
+    const { tasks } = buildDemoData(now, timeZone);
 
     expect(tasks.some((t) => t.status === 'COMPLETED')).toBe(true);
   });
