@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { AuthButton } from '@/components/auth-button';
+import { MainNav } from '@/components/main-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { TimezoneSync } from '@/components/timezone-sync';
 import { parseTheme, THEME_COOKIE } from '@/lib/theme';
@@ -38,26 +39,31 @@ export default async function RootLayout({
         <TimezoneSync />
         <header className="sticky top-0 z-50 border-b border-line bg-surface">
           <div className="mx-auto flex min-h-16 w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-4 md:px-6">
-            <div className="flex items-center gap-2.5">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <circle
-                  cx="12"
-                  cy="3"
-                  r="2"
-                  className="fill-accent"
-                  stroke="none"
-                />
-              </svg>
-              <span className="font-display text-lg font-semibold">Orbit</span>
+            <div className="flex items-center gap-5 sm:gap-7">
+              <div className="flex items-center gap-2.5">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <circle
+                    cx="12"
+                    cy="3"
+                    r="2"
+                    className="fill-accent"
+                    stroke="none"
+                  />
+                </svg>
+                <span className="font-display text-lg font-semibold">
+                  Orbit
+                </span>
+              </div>
+              <MainNav />
             </div>
             <div className="flex items-center gap-3">
               <ThemeToggle initialTheme={theme} />
