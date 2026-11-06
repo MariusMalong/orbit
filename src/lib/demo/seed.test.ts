@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildDemoData, demoWorkdayStart } from './seed';
 import { generateSchedule, planningStart } from '../engine/scheduler';
-import { atZonedTime } from '../time/zoned';
+import { atZonedTime, startOfNextZonedDay } from '../time/zoned';
 
 // A Melbourne visitor on Friday 6 November, while the server (UTC) is still on
 // Thursday. The demo must use the visitor's day.
@@ -23,10 +23,12 @@ function scheduleDemo(now: Date) {
       title: t.title,
       durationEstimate: t.durationEstimate,
       priority: t.priority,
+      deadline: t.deadline,
     })),
     data.commitments.map((c) => ({ start: c.startTime, end: c.endTime })),
     planningStart(now, workDayStart),
-    workDayEnd
+    workDayEnd,
+    { urgentUntil: startOfNextZonedDay(now, timeZone) }
   );
 
   return { ...data, active, workDayStart, workDayEnd, result };
@@ -91,6 +93,13 @@ describe.each(visits)('buildDemoData, visiting %s', (_, now) => {
     for (const id of result.bumpedTaskIds) {
       expect(lowPriority).toContain(id);
     }
+  });
+
+  it('plans the task with a deadline first, and finishes it in time', () => {
+    const { result } = scheduleDemo(now);
+
+    expect(result.scheduledBlocks[0].taskId).toBe('Reply to supplier emails');
+    expect(result.lateTaskIds).toEqual([]);
   });
 
   it('splits at least one task around a commitment', () => {

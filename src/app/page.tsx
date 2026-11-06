@@ -18,7 +18,12 @@ import { deleteCommitment } from '@/app/actions/commitments';
 import { FocusTimer } from '@/components/focus-timer';
 import { StatsRow } from '@/components/stats-row';
 import { summarizeDay } from '@/lib/analytics/summarize';
-import { formatClock, formatShortDay, PRIORITY_LABELS } from '@/lib/format';
+import {
+  formatClock,
+  formatDue,
+  formatShortDay,
+  PRIORITY_LABELS,
+} from '@/lib/format';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
 import {
   atZonedTime,
@@ -109,6 +114,7 @@ export default async function Home() {
     title: t.title,
     durationEstimate: t.durationEstimate,
     priority: t.priority,
+    deadline: t.deadline,
   }));
 
   const timeWindows: TimeWindow[] = rawCommitments.map((c) => ({
@@ -116,19 +122,23 @@ export default async function Home() {
     end: c.endTime,
   }));
 
+  const startOfToday = startOfZonedDay(today, timeZone);
+  const startOfTomorrow = startOfNextZonedDay(today, timeZone);
+
   // 3. Run the Scheduling Engine, from now (or the start of the workday if
-  // it hasn't begun): time that has already passed can't be planned.
+  // it hasn't begun): time that has already passed can't be planned. Tasks
+  // due before midnight are urgent and go first.
   const planStart = planningStart(today, workDayStart);
-  const { scheduledBlocks, bumpedTaskIds } = generateSchedule(
+  const { scheduledBlocks, bumpedTaskIds, lateTaskIds } = generateSchedule(
     schedulableTasks,
     timeWindows,
     planStart,
-    workDayEnd
+    workDayEnd,
+    { urgentUntil: startOfTomorrow }
   );
+  const lateTasks = new Set(lateTaskIds);
 
   // 4. Analytics: aggregate today's executed time and task completion
-  const startOfToday = startOfZonedDay(today, timeZone);
-  const startOfTomorrow = startOfNextZonedDay(today, timeZone);
 
   const [todaysEntries, completedTodayCount] = await Promise.all([
     // TimeEntry has no userId column, so ownership is enforced through the
@@ -186,6 +196,7 @@ export default async function Home() {
           <Timeline
             scheduledBlocks={scheduledBlocks}
             bumpedTaskIds={bumpedTaskIds}
+            lateTaskIds={lateTaskIds}
             tasks={schedulableTasks}
             commitments={rawCommitments.map((c) => ({
               id: c.id,
@@ -237,6 +248,15 @@ export default async function Home() {
                             {PRIORITY_LABELS[task.priority] ?? task.priority}{' '}
                             priority
                           </p>
+                          {task.deadline && (
+                            <p
+                              className={`text-sm ${lateTasks.has(task.id) ? 'font-medium text-danger' : 'text-muted'}`}
+                            >
+                              {formatDue(task.deadline, today, timeZone)}
+                              {lateTasks.has(task.id) &&
+                                " · won't be done in time"}
+                            </p>
+                          )}
                         </div>
                         {isInProgress && (
                           <span className="shrink-0 rounded-full bg-subtle px-2 py-0.5 text-xs text-ink-2">

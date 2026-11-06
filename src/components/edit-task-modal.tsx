@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { updateTask } from '@/app/actions/task';
+import { formatForDateTimeInput } from '@/lib/format';
 import {
   buttonPrimary,
   buttonSecondary,
@@ -15,6 +16,7 @@ interface EditTaskProps {
     title: string;
     durationEstimate: number;
     priority: number;
+    deadline: Date | null;
   };
 }
 
@@ -107,6 +109,26 @@ export function EditTaskModal({ task }: EditTaskProps) {
                   </select>
                 </label>
               </div>
+
+              <label
+                htmlFor={`edit-task-deadline-${task.id}`}
+                className={fieldLabel}
+              >
+                <span>
+                  Due <span className="font-normal text-muted">(optional)</span>
+                </span>
+                <input
+                  type="datetime-local"
+                  name="deadline"
+                  id={`edit-task-deadline-${task.id}`}
+                  defaultValue={
+                    task.deadline
+                      ? formatForDateTimeInput(new Date(task.deadline))
+                      : ''
+                  }
+                  className={fieldInput}
+                />
+              </label>
 
               <div className="mt-2 flex justify-end gap-2">
                 <button

@@ -20,19 +20,19 @@ For each day it:
 
 1. Starts from your working hours (for example 09:00–17:00). Once the day has started, it plans from the current time instead, rounded up to the next 5 minutes, because time that has passed can't be planned.
 2. Cuts out your fixed commitments, leaving a list of free windows.
-3. Sorts tasks by priority, highest first.
-4. Walks through the free windows, placing each task in the earliest space available. A task that doesn't fit in one window is split across the next ones.
-5. Marks any task that still has time left over at the end of the day as "bumped", so the UI can warn you it won't fit.
+3. Orders the tasks in two tiers. Tasks due today (including overdue ones) go first, earliest deadline first. Within one day that's the "earliest deadline first" rule, which keeps lateness as low as possible when work can be split. Everything else follows priority, with the deadline only breaking ties.
+4. Walks through the free windows, placing each task in the earliest space available. A task that doesn't fit in one window is split across the next ones, but never into a block shorter than 15 minutes: a gap too small to be useful is left empty, and a split is shortened if it would leave a sliver behind.
+5. Marks any task that still has time left over at the end of the day as "bumped", and any task that won't be finished by its deadline as "late", so the UI can warn you.
 
 The plan isn't stored. It's recalculated on every page load from the current data, so editing a task, adding a meeting or logging time changes it immediately.
 
 ## What works today
 
 - Sign in with GitHub, or try a demo account with sample data.
-- Add, edit, complete and delete tasks. Each task has a title, a time estimate in minutes and a priority (low, medium or high).
+- Add, edit, complete and delete tasks. Each task has a title, a time estimate in minutes, a priority (low, medium or high) and an optional due date and time.
 - Add, edit and delete fixed commitments, such as appointments or lectures.
 - Set your working hours separately for each day of the week.
-- See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks, a line marking the current time, and a warning for anything that doesn't fit.
+- See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks, a line marking the current time, and warnings for anything that doesn't fit or won't make its deadline.
 - Use a focus timer on any task. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
 - A summary of the day: time focused, tasks completed versus planned, and time still scheduled.
 
@@ -47,12 +47,12 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ## Known limitations
 
-- The engine fills every gap, so a task can end up with a block of only a few minutes squeezed in before a commitment.
+- Tasks that don't fit today aren't planned into the following days, so the engine can only tell you a task due later this week is at risk once it's due today.
 - Starting a demo isn't rate-limited, so the only cap on demo accounts is the 24-hour cleanup.
 
 ## Next steps
 
-- A minimum block length, so tasks aren't split into slivers of a few minutes.
+- Plan several days ahead, so tasks that don't fit today roll into the next working days, and deadlines later in the week can be checked early.
 - Projects for grouping tasks, and saved schedules. The `Project`, `Schedule` and `ScheduleBlock` models are already in the schema but aren't used yet.
 
 ## Tech stack
