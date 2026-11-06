@@ -38,6 +38,10 @@ export default async function Home() {
   if (!session?.user?.id) {
     redirect('/signin');
   }
+  // New accounts set up their hours and first tasks first.
+  if (!session.user.onboarded) {
+    redirect('/welcome');
+  }
 
   const {
     timeZone,
