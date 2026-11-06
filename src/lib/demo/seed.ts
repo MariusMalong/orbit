@@ -10,7 +10,8 @@ import { getZonedParts, zonedWallTimeToDate } from '@/lib/time/zoned';
 // workday starts 30–60 minutes before the visitor arrives, and everything is
 // placed relative to that start. Every visitor sees the same shape of day: a
 // commitment coming up soon, tasks split around commitments, and one or two
-// low-priority tasks that don't fit (see seed.test.ts, which checks this
+// low-priority tasks that don't fit, and a task with a deadline that jumps the
+// queue (see seed.test.ts, which checks this
 // against the real scheduler).
 
 export type DemoTimeEntry = {
@@ -24,6 +25,7 @@ export type DemoTask = {
   priority: number; // 3 = High, 1 = Low
   durationEstimate: number; // Minutes still to do, like a real task after focus time is logged
   status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED';
+  deadline: Date | null;
   completedAt: Date | null;
   timeEntries: DemoTimeEntry[];
 };
@@ -95,6 +97,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       priority: 3,
       durationEstimate: 75,
       status: 'IN_PROGRESS',
+      deadline: null,
       completedAt: null,
       timeEntries: [{ startTime: ago(90), endTime: ago(15), duration: 75 }],
     },
@@ -103,6 +106,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       priority: 3,
       durationEstimate: 90,
       status: 'TODO',
+      deadline: null,
       completedAt: null,
       timeEntries: [],
     },
@@ -111,14 +115,18 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       priority: 2,
       durationEstimate: 60,
       status: 'TODO',
+      deadline: null,
       completedAt: null,
       timeEntries: [],
     },
     {
+      // Medium priority, but due before the coffee meeting: the engine plans
+      // it ahead of the high-priority tasks and it still finishes on time.
       title: 'Reply to supplier emails',
       priority: 2,
       durationEstimate: 30,
       status: 'TODO',
+      deadline: at(180),
       completedAt: null,
       timeEntries: [],
     },
@@ -127,6 +135,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       priority: 1,
       durationEstimate: 20,
       status: 'TODO',
+      deadline: null,
       completedAt: null,
       timeEntries: [],
     },
@@ -135,6 +144,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       priority: 1,
       durationEstimate: 45,
       status: 'TODO',
+      deadline: null,
       completedAt: null,
       timeEntries: [],
     },
@@ -144,6 +154,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       priority: 2,
       durationEstimate: 0,
       status: 'COMPLETED',
+      deadline: null,
       completedAt: now,
       timeEntries: [{ startTime: ago(15), endTime: now, duration: 15 }],
     },
