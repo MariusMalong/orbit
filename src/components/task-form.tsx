@@ -56,6 +56,18 @@ export function TaskForm() {
           </label>
         </div>
 
+        <label htmlFor="task-deadline" className={fieldLabel}>
+          <span>
+            Due <span className="font-normal text-muted">(optional)</span>
+          </span>
+          <input
+            type="datetime-local"
+            name="deadline"
+            id="task-deadline"
+            className={fieldInput}
+          />
+        </label>
+
         <button type="submit" className={buttonAccent}>
           Add to plan
         </button>

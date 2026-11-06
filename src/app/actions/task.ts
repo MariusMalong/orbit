@@ -3,6 +3,18 @@
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
+import { getUserTimeZone } from '@/lib/time/user-timezone';
+import { parseDateTimeLocal } from '@/lib/time/zoned';
+
+// The optional "Due" field: empty means no deadline. Like commitments, the
+// datetime-local value is a wall-clock time in the visitor's timezone.
+async function readDeadline(formData: FormData): Promise<Date | null> {
+  const value = (formData.get('deadline') as string | null)?.trim();
+  if (!value) return null;
+  const deadline = parseDateTimeLocal(value, await getUserTimeZone());
+  if (!deadline) throw new Error('Invalid due date.');
+  return deadline;
+}
 
 export async function createTask(formData: FormData) {
   // 1. Verify the user's identity securely on the server
@@ -15,6 +27,7 @@ export async function createTask(formData: FormData) {
   const title = formData.get('title') as string;
   const durationEstimate = Number(formData.get('durationEstimate'));
   const priority = Number(formData.get('priority'));
+  const deadline = await readDeadline(formData);
 
   // 3. Write the new task to PostgreSQL
   await prisma.task.create({
@@ -22,6 +35,7 @@ export async function createTask(formData: FormData) {
       title: title,
       durationEstimate: durationEstimate,
       priority: priority,
+      deadline,
       userId: session.user.id,
     },
   });
@@ -91,6 +105,7 @@ export async function updateTask(formData: FormData) {
     10
   );
   const priority = parseInt(formData.get('priority') as string, 10);
+  const deadline = await readDeadline(formData);
 
   await prisma.task.updateMany({
     where: {
@@ -101,6 +116,7 @@ export async function updateTask(formData: FormData) {
       title,
       durationEstimate,
       priority,
+      deadline,
     },
   });
 
