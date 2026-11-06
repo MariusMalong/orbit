@@ -70,6 +70,7 @@ export async function completeTask(formData: FormData) {
     },
     data: {
       status: 'COMPLETED',
+      completedAt: new Date(),
     },
   });
 

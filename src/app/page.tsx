@@ -137,13 +137,11 @@ export default async function Home() {
       },
       select: { duration: true },
     }),
-    // No completedAt column exists; updatedAt is set by the COMPLETED
-    // transition, so it is used as the completion timestamp.
     prisma.task.count({
       where: {
         userId: session.user.id,
         status: 'COMPLETED',
-        updatedAt: { gte: startOfToday, lt: startOfTomorrow },
+        completedAt: { gte: startOfToday, lt: startOfTomorrow },
       },
     }),
   ]);

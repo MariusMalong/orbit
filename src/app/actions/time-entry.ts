@@ -37,12 +37,14 @@ export async function logTimeEntry(formData: FormData) {
 
   // 3. Subtract the time worked from the estimate (floor at 0)
   const newEstimate = Math.max(0, task.durationEstimate - durationMinutes);
+  const isDone = newEstimate === 0;
 
   await prisma.task.update({
     where: { id: taskId },
     data: {
       durationEstimate: newEstimate,
-      status: newEstimate === 0 ? 'COMPLETED' : 'IN_PROGRESS',
+      status: isDone ? 'COMPLETED' : 'IN_PROGRESS',
+      completedAt: isDone ? endTime : null,
     },
   });
 
