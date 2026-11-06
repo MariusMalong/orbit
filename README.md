@@ -33,7 +33,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Sign in with GitHub, or try a demo account with sample data.
 - Add tasks and fixed commitments (events, such as appointments or lectures) from one quick-add bar at the top of the page. Each task has a title, a time estimate, a priority (low, medium or high) and an optional due date and time.
 - Click an upcoming hour or a free slot on the timeline to add an event there, and click any block to edit it, mark it as done or delete it.
-- Set your working hours separately for each day of the week.
+- Set your working hours for the whole week in one place, and mark days off: nothing gets planned on them, and work moves to the next working day.
 - See whatever doesn't fit today planned into the following days, next to your upcoming events, under "Coming up", and how full each day of the week is.
 - See the next 7 days side by side on the Week page, with how full each day is. When a task won't meet its deadline, one click raises its priority so it's planned sooner.
 - See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks, a line marking the current time, and warnings for anything that doesn't fit or won't make its deadline.
@@ -54,13 +54,12 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 ## Known limitations
 
 - The week plan flags a deadline it can't meet, but doesn't reshuffle earlier days to rescue the task. Raising the task's priority does.
-- Every day defaults to 09:00–17:00, weekends included, because there's no way to mark a day off yet.
+- Until you change them, every day is a 09:00–17:00 workday, weekends included.
 - Tasks with the same priority (and no deadline today) are planned in the order they were added, newest first, not by length.
 - Starting a demo isn't rate-limited, so the only cap on demo accounts is the 24-hour cleanup.
 
 ## Next steps
 
-- Days off, so weekends aren't planned as workdays.
 - When a deadline later in the week is at risk, plan backwards from it and pull the task into earlier days, instead of only flagging it.
 - Projects for grouping tasks, and saved schedules. The `Project`, `Schedule` and `ScheduleBlock` models are already in the schema but aren't used yet.
 
