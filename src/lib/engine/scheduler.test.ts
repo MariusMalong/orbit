@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateFreeWindows,
   generateSchedule,
+  planningStart,
   SchedulableTask,
   TimeWindow,
 } from './scheduler';
@@ -282,5 +283,45 @@ describe('generateSchedule', () => {
 
     expect(tasks).toEqual(tasksBefore);
     expect(commitments).toEqual(commitmentsBefore);
+  });
+});
+
+describe('planningStart', () => {
+  it('starts at the beginning of the workday if it has not started yet', () => {
+    expect(planningStart(at('07:42'), at('09:00'))).toEqual(at('09:00'));
+  });
+
+  it('starts from now, rounded up to the next 5 minutes, during the day', () => {
+    expect(planningStart(at('10:02'), at('09:00'))).toEqual(at('10:05'));
+  });
+
+  it('keeps a time that is already on a 5-minute mark', () => {
+    expect(planningStart(at('10:05'), at('09:00'))).toEqual(at('10:05'));
+  });
+
+  it('rounds up past a 5-minute mark by even a few seconds', () => {
+    const justAfter = new Date(at('10:05').getTime() + 30_000);
+
+    expect(planningStart(justAfter, at('09:00'))).toEqual(at('10:10'));
+  });
+
+  it('bumps everything once the workday is over', () => {
+    const start = planningStart(at('17:30'), at('09:00'));
+
+    const result = generateSchedule([task('a', 30)], [], start, at('17:00'));
+
+    expect(result.scheduledBlocks).toEqual([]);
+    expect(result.bumpedTaskIds).toEqual(['a']);
+  });
+
+  it('plans only the time left in the day', () => {
+    const start = planningStart(at('16:00'), at('09:00'));
+
+    const result = generateSchedule([task('a', 90)], [], start, at('17:00'));
+
+    expect(result.scheduledBlocks).toEqual([
+      { taskId: 'a', startTime: at('16:00'), endTime: at('17:00') },
+    ]);
+    expect(result.bumpedTaskIds).toEqual(['a']);
   });
 });

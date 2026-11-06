@@ -25,6 +25,21 @@ export type ScheduleResult = {
 
 // 3. THE ENGINE
 
+const PLANNING_STEP_MINUTES = 5;
+
+/**
+ * Where today's plan should begin: the start of the workday, or, once the day
+ * has started, the current time rounded up to the next 5 minutes (so blocks
+ * start on tidy times like 14:35 rather than 14:32). Time that has already
+ * passed can't be planned. If this is at or after the end of the workday,
+ * there's nothing left to plan and every task is bumped.
+ */
+export function planningStart(now: Date, workDayStart: Date): Date {
+  const stepMs = PLANNING_STEP_MINUTES * 60000;
+  const roundedNow = new Date(Math.ceil(now.getTime() / stepMs) * stepMs);
+  return roundedNow > workDayStart ? roundedNow : new Date(workDayStart);
+}
+
 /**
  * Returns the free gaps in the workday left after removing fixed commitments.
  */
