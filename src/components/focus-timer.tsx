@@ -68,8 +68,8 @@ export function FocusTimer({ taskId }: { taskId: string }) {
       ) : isActive ? (
         <>
           <span className="relative flex h-2 w-2" aria-hidden="true">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-ink opacity-50"></span>
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-ink"></span>
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-on-accent opacity-50"></span>
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-on-accent"></span>
           </span>
           Stop <span className="tabular-nums">{formatTime(seconds)}</span>
         </>

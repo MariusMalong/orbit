@@ -1,4 +1,4 @@
-// Shared Tailwind class strings for the Studio design language.
+// Shared Tailwind class strings for the Tide design language (see globals.css).
 // Kept as plain strings (not components) so server and client components can both use them.
 
 export const panel = 'rounded-xl border border-line bg-surface p-5';
@@ -15,9 +15,9 @@ const buttonBase =
   'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 disabled:opacity-60';
 
-export const buttonPrimary = `${buttonBase} bg-ink text-white hover:bg-ink-2`;
+export const buttonPrimary = `${buttonBase} bg-primary text-on-primary hover:bg-primary-hover`;
 
-export const buttonAccent = `${buttonBase} bg-accent font-semibold text-ink hover:bg-accent-hover`;
+export const buttonAccent = `${buttonBase} bg-accent font-semibold text-on-accent hover:bg-accent-hover`;
 
 export const buttonSecondary = `${buttonBase} border border-line bg-surface text-ink hover:bg-subtle`;
 
