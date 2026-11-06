@@ -54,6 +54,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - **Time is stored in whole minutes.** Durations are integers, which avoids floating-point drift when times are added up and subtracted.
 - **Demo accounts are ordinary users.** "Try the demo" creates a user flagged `isDemo`, fills it from a pure seed function, and creates an Auth.js database session for it. Each visitor gets their own account, and everything else (including the per-user scoping) works exactly as for a GitHub user. Demo accounts older than 24 hours are deleted the next time someone starts a demo.
 - **Colours are role tokens.** Components use utilities such as `bg-surface` and `text-muted`, which read CSS variables defined in `globals.css`. Dark mode only swaps those variables, so no component needs `dark:` classes. The chosen theme is kept in a cookie, so the server renders the right one straight away, without a flash of the wrong colours.
+- **Demo accounts are rate-limited without storing IP addresses.** Each demo records a keyed hash of the visitor's IP (HMAC with the app's secret), so one visitor can start 10 an hour and everyone together 300. Requests from the machine itself, as in local development and CI, only count towards the overall limit.
 - **No experimental React features.** I've left the React Compiler and Cache Components switched off, so state and memoization are handled by hand.
 
 ## Known limitations
@@ -61,7 +62,6 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - The week plan flags a deadline it can't meet, but doesn't reshuffle earlier days to rescue the task. Raising the task's priority does.
 - Until you change them, every day is a 09:00–17:00 workday, weekends included.
 - Tasks with the same priority (and no deadline today) are planned in the order they were added, newest first, not by length.
-- Starting a demo isn't rate-limited, so the only cap on demo accounts is the 24-hour cleanup.
 
 ## Next steps
 
