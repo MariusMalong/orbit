@@ -1,15 +1,13 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { raiseTaskPriority } from '@/app/actions/task';
 import { QuickAdd } from '@/components/quick-add';
 import { WeekBoard } from '@/components/week-board';
 import { WorkingHours } from '@/components/working-hours';
 import { buttonSecondary } from '@/components/ui-classes';
-import { formatDayRange, formatDue } from '@/lib/format';
+import { formatDayRange, formatDue, formatShortDay } from '@/lib/format';
 import { loadPlan } from '@/lib/planning/load-plan';
 import type { SchedulableTask } from '@/lib/engine/scheduler';
-import { raisingPriorityHelps } from '@/lib/engine/rescue';
 import { toDateKey } from '@/lib/time/clock';
 
 export const metadata: Metadata = {
@@ -27,8 +25,17 @@ export default async function WeekPage() {
     redirect('/welcome');
   }
 
-  const { timeZone, now, tasks, commitments, days, week, plan, loads } =
-    await loadPlan(session.user.id);
+  const {
+    timeZone,
+    now,
+    tasks,
+    commitments,
+    days,
+    week,
+    plan,
+    changes,
+    loads,
+  } = await loadPlan(session.user.id);
 
   const lastDay = days[days.length - 1];
   const lateTasks = tasks.filter((t) => plan.lateTaskIds.includes(t.id));
@@ -37,28 +44,28 @@ export default async function WeekPage() {
       plan.unscheduledTaskIds.includes(t.id) && !plan.lateTaskIds.includes(t.id)
   );
 
-  // An overdue task is already planned first, so raising its priority can't
-  // help. Otherwise the button is only offered when re-planning with the task
-  // at high priority gets it done in time without making anything else late.
-  const busy = commitments.map((c) => ({ start: c.start, end: c.end }));
+  // The planner already starts deadline work as early as it needs to (see
+  // src/lib/engine/reservations.ts), so a task that's still late doesn't fit
+  // in the time before its deadline at all.
   const isOverdue = (task: SchedulableTask) =>
     !!task.deadline && task.deadline <= now;
-  const canRaise = (task: SchedulableTask) =>
-    !isOverdue(task) && raisingPriorityHelps(task.id, tasks, busy, days);
   const lateMessage = (task: SchedulableTask) => {
     const due = task.deadline
       ? formatDue(task.deadline, now, timeZone).replace(/^Due /, '')
       : '';
-    if (isOverdue(task)) {
-      return `was due ${due}. It's planned as soon as possible.`;
-    }
-    if (canRaise(task)) {
-      return `won't be done by ${due}. Making it high priority gets it done in time.`;
-    }
-    return task.priority >= 3
-      ? `won't be done by ${due}, even at high priority. Free up time or change your working hours.`
-      : `won't be done by ${due}, and raising its priority wouldn't fix that. Free up time or change your working hours.`;
+    return isOverdue(task)
+      ? `was due ${due}. It's planned as soon as possible.`
+      : `won't be done by ${due}, even started as early as possible. Free up time before then or change your working hours.`;
   };
+
+  // How a day is named in sentences: "today", "tomorrow", or "Mon 9 Nov".
+  const dayName = (index: number) =>
+    index === 0
+      ? 'today'
+      : index === 1
+        ? 'tomorrow'
+        : formatShortDay(days[index].date, timeZone);
+  const titleOf = (id: string) => tasks.find((t) => t.id === id)?.title ?? '';
 
   return (
     <div className="flex flex-col gap-5">
@@ -84,25 +91,53 @@ export default async function WeekPage() {
         <div
           key={task.id}
           role="status"
-          className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-danger/40 bg-danger/5 px-4 py-3 text-sm text-danger"
+          className="rounded-lg border border-danger/40 bg-danger/5 px-4 py-3 text-sm text-danger"
         >
           <p>
             <strong className="font-semibold">{task.title}</strong>{' '}
             {lateMessage(task)}
           </p>
-          {canRaise(task) && (
-            <form action={raiseTaskPriority}>
-              <input type="hidden" name="taskId" value={task.id} />
-              <button
-                type="submit"
-                className="min-h-10 cursor-pointer rounded-lg border border-danger/40 bg-surface px-3 font-semibold text-danger transition hover:bg-danger/5 focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
-              >
-                Make it high priority
-              </button>
-            </form>
-          )}
         </div>
       ))}
+
+      {changes.startedEarly.length > 0 && (
+        <section
+          aria-labelledby="deadline-changes"
+          className="rounded-lg border border-line bg-surface px-4 py-3 text-sm"
+        >
+          <h2 id="deadline-changes" className="font-semibold">
+            Planned around your deadlines
+          </h2>
+          <ul className="mt-1 flex flex-col gap-0.5 text-ink-2">
+            {changes.startedEarly.map(({ taskId, firstDayIndex }) => {
+              const deadline = tasks.find((t) => t.id === taskId)?.deadline;
+              return (
+                <li key={taskId}>
+                  <strong className="font-medium text-ink">
+                    {titleOf(taskId)}
+                  </strong>{' '}
+                  starts {dayName(firstDayIndex)}, so it&apos;s done by{' '}
+                  {deadline
+                    ? formatDue(deadline, now, timeZone).replace(/^Due /, '')
+                    : 'its deadline'}
+                  .
+                </li>
+              );
+            })}
+            {changes.movedLater.map(({ taskId, fromDayIndex, toDayIndex }) => (
+              <li key={taskId}>
+                To make room,{' '}
+                <strong className="font-medium text-ink">
+                  {titleOf(taskId)}
+                </strong>{' '}
+                {toDayIndex === null
+                  ? `no longer fits this week (it would have finished ${dayName(fromDayIndex)}).`
+                  : `now finishes ${dayName(toDayIndex)} instead of ${dayName(fromDayIndex)}.`}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {notThisWeek.length > 0 && (
         <div
