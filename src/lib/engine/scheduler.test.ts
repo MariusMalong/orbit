@@ -270,7 +270,11 @@ describe('generateSchedule', () => {
   it('returns an empty schedule when there are no tasks', () => {
     const result = generateSchedule([], [], at('09:00'), at('17:00'));
 
-    expect(result).toEqual({ scheduledBlocks: [], bumpedTaskIds: [] });
+    expect(result).toEqual({
+      scheduledBlocks: [],
+      bumpedTaskIds: [],
+      lateTaskIds: [],
+    });
   });
 
   it('does not modify the tasks or commitments passed in', () => {
@@ -323,5 +327,257 @@ describe('planningStart', () => {
       { taskId: 'a', startTime: at('16:00'), endTime: at('17:00') },
     ]);
     expect(result.bumpedTaskIds).toEqual(['a']);
+  });
+});
+
+// A task with a deadline ("HH:mm" today, or a full Date).
+const due = (
+  base: SchedulableTask,
+  deadline: string | Date
+): SchedulableTask => ({
+  ...base,
+  deadline: typeof deadline === 'string' ? at(deadline) : deadline,
+});
+
+const order = (blocks: { taskId: string }[]) => [
+  ...new Set(blocks.map((b) => b.taskId)),
+];
+
+describe('deadlines', () => {
+  it('plans a task due today ahead of higher-priority tasks', () => {
+    const result = generateSchedule(
+      [task('report', 60, 3), due(task('invoice', 30, 1), '11:00')],
+      [],
+      at('09:00'),
+      at('17:00')
+    );
+
+    expect(result.scheduledBlocks[0]).toEqual({
+      taskId: 'invoice',
+      startTime: at('09:00'),
+      endTime: at('09:30'),
+    });
+    expect(result.lateTaskIds).toEqual([]);
+  });
+
+  it('plans urgent tasks earliest deadline first', () => {
+    const result = generateSchedule(
+      [due(task('noon', 30), '12:00'), due(task('ten', 30), '10:00')],
+      [],
+      at('09:00'),
+      at('17:00')
+    );
+
+    expect(order(result.scheduledBlocks)).toEqual(['ten', 'noon']);
+  });
+
+  it('breaks a tie between equal deadlines by priority', () => {
+    const result = generateSchedule(
+      [due(task('low', 30, 1), '12:00'), due(task('high', 30, 3), '12:00')],
+      [],
+      at('09:00'),
+      at('17:00')
+    );
+
+    expect(order(result.scheduledBlocks)).toEqual(['high', 'low']);
+  });
+
+  it('keeps priority order for later deadlines, using them only as a tie-break', () => {
+    const tomorrow = new Date('2026-11-06T12:00:00');
+    const nextWeek = new Date('2026-11-12T12:00:00');
+
+    const result = generateSchedule(
+      [
+        task('medium-no-deadline', 30, 2),
+        due(task('medium-next-week', 30, 2), nextWeek),
+        due(task('medium-tomorrow', 30, 2), tomorrow),
+        task('high-no-deadline', 30, 3),
+      ],
+      [],
+      at('09:00'),
+      at('17:00')
+    );
+
+    expect(order(result.scheduledBlocks)).toEqual([
+      'high-no-deadline',
+      'medium-tomorrow',
+      'medium-next-week',
+      'medium-no-deadline',
+    ]);
+  });
+
+  it('treats an overdue task as the most urgent, and reports it late', () => {
+    const result = generateSchedule(
+      [due(task('due-ten', 30), '10:00'), due(task('overdue', 30), '08:00')],
+      [],
+      at('09:00'),
+      at('17:00')
+    );
+
+    expect(order(result.scheduledBlocks)).toEqual(['overdue', 'due-ten']);
+    expect(result.lateTaskIds).toEqual(['overdue']);
+  });
+
+  it('reports a task that finishes after its deadline as late', () => {
+    const result = generateSchedule(
+      [due(task('big', 120), '10:00')],
+      [],
+      at('09:00'),
+      at('17:00')
+    );
+
+    expect(result.bumpedTaskIds).toEqual([]);
+    expect(result.lateTaskIds).toEqual(['big']);
+  });
+
+  it('counts finishing exactly at the deadline as on time', () => {
+    const result = generateSchedule(
+      [due(task('exact', 60), '10:00')],
+      [],
+      at('09:00'),
+      at('17:00')
+    );
+
+    expect(result.lateTaskIds).toEqual([]);
+  });
+
+  it('reports a task due today that does not fit as late', () => {
+    const result = generateSchedule(
+      [due(task('first', 60), '10:00'), due(task('second', 30), '10:00')],
+      [],
+      at('09:00'),
+      at('10:00')
+    );
+
+    expect(result.bumpedTaskIds).toEqual(['second']);
+    expect(result.lateTaskIds).toEqual(['second']);
+  });
+
+  it('does not report a bumped task as late when it is due after today', () => {
+    const result = generateSchedule(
+      [due(task('later', 120), new Date('2026-11-09T12:00:00'))],
+      [],
+      at('09:00'),
+      at('10:00')
+    );
+
+    expect(result.bumpedTaskIds).toEqual(['later']);
+    expect(result.lateTaskIds).toEqual([]);
+  });
+
+  it('uses urgentUntil to decide what counts as due today', () => {
+    // Due tonight, after the workday ends: urgent only if "today" runs to midnight.
+    const tasks = [task('high', 60, 3), due(task('tonight', 30, 1), '20:00')];
+    const midnight = new Date('2026-11-06T00:00:00');
+
+    const withoutOption = generateSchedule(tasks, [], at('09:00'), at('17:00'));
+    const withOption = generateSchedule(tasks, [], at('09:00'), at('17:00'), {
+      urgentUntil: midnight,
+    });
+
+    expect(order(withoutOption.scheduledBlocks)).toEqual(['high', 'tonight']);
+    expect(order(withOption.scheduledBlocks)).toEqual(['tonight', 'high']);
+  });
+});
+
+describe('minimum block length', () => {
+  it('leaves a gap empty rather than squeezing in a sliver', () => {
+    const result = generateSchedule(
+      [task('a', 60)],
+      [window('09:10', '10:00')],
+      at('09:00'),
+      at('17:00')
+    );
+
+    expect(result.scheduledBlocks).toEqual([
+      { taskId: 'a', startTime: at('10:00'), endTime: at('11:00') },
+    ]);
+  });
+
+  it('still fits a whole task shorter than the minimum into a small gap', () => {
+    const result = generateSchedule(
+      [task('quick', 10)],
+      [window('09:10', '10:00')],
+      at('09:00'),
+      at('17:00')
+    );
+
+    expect(result.scheduledBlocks).toEqual([
+      { taskId: 'quick', startTime: at('09:00'), endTime: at('09:10') },
+    ]);
+  });
+
+  it('shortens a split so the piece left over is not a sliver', () => {
+    // 50 minutes into a 45-minute gap would leave 5 minutes; use 35 + 15 instead.
+    const result = generateSchedule(
+      [task('a', 50)],
+      [window('09:45', '10:00')],
+      at('09:00'),
+      at('17:00')
+    );
+
+    expect(result.scheduledBlocks).toEqual([
+      { taskId: 'a', startTime: at('09:00'), endTime: at('09:35') },
+      { taskId: 'a', startTime: at('10:00'), endTime: at('10:15') },
+    ]);
+  });
+
+  it('skips a gap when any split would leave a piece too short', () => {
+    // 25 minutes can't be split into two pieces of at least 15.
+    const result = generateSchedule(
+      [task('a', 25)],
+      [window('09:20', '10:00')],
+      at('09:00'),
+      at('17:00')
+    );
+
+    expect(result.scheduledBlocks).toEqual([
+      { taskId: 'a', startTime: at('10:00'), endTime: at('10:25') },
+    ]);
+  });
+
+  it('accepts a custom minimum', () => {
+    const result = generateSchedule(
+      [task('a', 60)],
+      [window('09:10', '10:00')],
+      at('09:00'),
+      at('17:00'),
+      { minBlockMinutes: 5 }
+    );
+
+    expect(result.scheduledBlocks).toEqual([
+      { taskId: 'a', startTime: at('09:00'), endTime: at('09:10') },
+      { taskId: 'a', startTime: at('10:00'), endTime: at('10:50') },
+    ]);
+  });
+
+  it('never creates a block under the minimum, except a whole short task', () => {
+    // Every combination of gap position, gap length and task length.
+    for (let gapStart = 0; gapStart <= 60; gapStart += 5) {
+      for (let gapLength = 5; gapLength <= 60; gapLength += 5) {
+        for (const minutes of [5, 10, 20, 25, 30, 45, 50, 90, 200]) {
+          const commitmentStart = new Date(
+            at('09:00').getTime() + gapStart * 60_000
+          );
+          const commitmentEnd = new Date(
+            commitmentStart.getTime() + gapLength * 60_000
+          );
+
+          const result = generateSchedule(
+            [task('a', minutes), task('b', 30)],
+            [{ start: commitmentStart, end: commitmentEnd }],
+            at('09:00'),
+            at('12:00')
+          );
+
+          for (const block of result.scheduledBlocks) {
+            const length =
+              (block.endTime.getTime() - block.startTime.getTime()) / 60_000;
+            const whole = block.taskId === 'a' ? minutes : 30;
+            if (length < 15) expect(length).toBe(whole);
+          }
+        }
+      }
+    }
   });
 });
