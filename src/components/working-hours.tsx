@@ -38,25 +38,6 @@ export function WorkingHours({
     setIsOpen(true);
   }
 
-  const update = (dayOfWeek: number, change: Partial<WeekRow>) =>
-    setRows((current) =>
-      current.map((row) =>
-        row.dayOfWeek === dayOfWeek ? { ...row, ...change } : row
-      )
-    );
-
-  function copyMonday() {
-    const monday = rows.find((row) => row.dayOfWeek === 1);
-    if (!monday) return;
-    setRows((current) =>
-      current.map((row) =>
-        row.isDayOff
-          ? row
-          : { ...row, startTime: monday.startTime, endTime: monday.endTime }
-      )
-    );
-  }
-
   return (
     <>
       <button
@@ -93,84 +74,7 @@ export function WorkingHours({
           }}
           className="mt-4 flex flex-col gap-4"
         >
-          <ul>
-            {rows.map((row) => {
-              const name = DAY_NAMES[row.dayOfWeek];
-              const id = `day-${row.dayOfWeek}`;
-              return (
-                <li
-                  key={row.dayOfWeek}
-                  className="flex min-h-13 flex-wrap items-center gap-x-3 gap-y-1 border-t border-line-soft py-1.5 first:border-t-0"
-                >
-                  <label
-                    htmlFor={`${id}-on`}
-                    className="flex w-32 cursor-pointer items-center gap-2.5 font-medium"
-                  >
-                    <input
-                      id={`${id}-on`}
-                      name={`${id}-on`}
-                      type="checkbox"
-                      checked={!row.isDayOff}
-                      onChange={(e) =>
-                        update(row.dayOfWeek, { isDayOff: !e.target.checked })
-                      }
-                      className="h-5 w-5 accent-accent"
-                    />
-                    {name}
-                  </label>
-
-                  {row.isDayOff ? (
-                    <>
-                      <span className="text-sm text-muted">Day off</span>
-                      {/* Kept, so switching the day back on restores them. */}
-                      <input
-                        type="hidden"
-                        name={`${id}-start`}
-                        value={row.startTime}
-                      />
-                      <input
-                        type="hidden"
-                        name={`${id}-end`}
-                        value={row.endTime}
-                      />
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <label htmlFor={`${id}-start`} className="sr-only">
-                        {name} start
-                      </label>
-                      <input
-                        id={`${id}-start`}
-                        name={`${id}-start`}
-                        type="time"
-                        required
-                        value={row.startTime}
-                        onChange={(e) =>
-                          update(row.dayOfWeek, { startTime: e.target.value })
-                        }
-                        className={timeInput}
-                      />
-                      <span className="text-sm text-muted">to</span>
-                      <label htmlFor={`${id}-end`} className="sr-only">
-                        {name} end
-                      </label>
-                      <input
-                        id={`${id}-end`}
-                        name={`${id}-end`}
-                        type="time"
-                        required
-                        value={row.endTime}
-                        onChange={(e) =>
-                          update(row.dayOfWeek, { endTime: e.target.value })
-                        }
-                        className={timeInput}
-                      />
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          <WeekHoursFields rows={rows} onChange={setRows} />
 
           {error && (
             <p role="alert" className="text-sm text-danger">
@@ -181,7 +85,7 @@ export function WorkingHours({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <button
               type="button"
-              onClick={copyMonday}
+              onClick={() => setRows(copyMondayToWorkdays)}
               className="min-h-11 cursor-pointer text-sm font-semibold text-accent hover:underline focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
             >
               Copy Monday to all workdays
@@ -202,5 +106,113 @@ export function WorkingHours({
         </form>
       </Dialog>
     </>
+  );
+}
+
+/** Monday's hours copied to every other day that isn't a day off. */
+export function copyMondayToWorkdays(rows: WeekRow[]): WeekRow[] {
+  const monday = rows.find((row) => row.dayOfWeek === 1);
+  if (!monday) return rows;
+  return rows.map((row) =>
+    row.isDayOff
+      ? row
+      : { ...row, startTime: monday.startTime, endTime: monday.endTime }
+  );
+}
+
+/**
+ * One row per day: a checkbox to work that day, and its hours. The inputs are
+ * named for parseWeeklyHoursForm, so any form containing this can submit them.
+ * Used by the working-hours dialog and the welcome page.
+ */
+export function WeekHoursFields({
+  rows,
+  onChange,
+}: {
+  rows: WeekRow[];
+  onChange: (rows: WeekRow[]) => void;
+}) {
+  const update = (dayOfWeek: number, change: Partial<WeekRow>) =>
+    onChange(
+      rows.map((row) =>
+        row.dayOfWeek === dayOfWeek ? { ...row, ...change } : row
+      )
+    );
+
+  return (
+    <ul>
+      {rows.map((row) => {
+        const name = DAY_NAMES[row.dayOfWeek];
+        const id = `day-${row.dayOfWeek}`;
+        return (
+          <li
+            key={row.dayOfWeek}
+            className="flex min-h-13 flex-wrap items-center gap-x-3 gap-y-1 border-t border-line-soft py-1.5 first:border-t-0"
+          >
+            <label
+              htmlFor={`${id}-on`}
+              className="flex w-32 cursor-pointer items-center gap-2.5 font-medium"
+            >
+              <input
+                id={`${id}-on`}
+                name={`${id}-on`}
+                type="checkbox"
+                checked={!row.isDayOff}
+                onChange={(e) =>
+                  update(row.dayOfWeek, { isDayOff: !e.target.checked })
+                }
+                className="h-5 w-5 accent-accent"
+              />
+              {name}
+            </label>
+
+            {row.isDayOff ? (
+              <>
+                <span className="text-sm text-muted">Day off</span>
+                {/* Kept, so switching the day back on restores them. */}
+                <input
+                  type="hidden"
+                  name={`${id}-start`}
+                  value={row.startTime}
+                />
+                <input type="hidden" name={`${id}-end`} value={row.endTime} />
+              </>
+            ) : (
+              <div className="flex items-center gap-2">
+                <label htmlFor={`${id}-start`} className="sr-only">
+                  {name} start
+                </label>
+                <input
+                  id={`${id}-start`}
+                  name={`${id}-start`}
+                  type="time"
+                  required
+                  value={row.startTime}
+                  onChange={(e) =>
+                    update(row.dayOfWeek, { startTime: e.target.value })
+                  }
+                  className={timeInput}
+                />
+                <span className="text-sm text-muted">to</span>
+                <label htmlFor={`${id}-end`} className="sr-only">
+                  {name} end
+                </label>
+                <input
+                  id={`${id}-end`}
+                  name={`${id}-end`}
+                  type="time"
+                  required
+                  value={row.endTime}
+                  onChange={(e) =>
+                    update(row.dayOfWeek, { endTime: e.target.value })
+                  }
+                  className={timeInput}
+                />
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }

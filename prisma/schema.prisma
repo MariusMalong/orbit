@@ -27,6 +27,8 @@ model User {
   availabilities Availability[]
   // Temporary accounts created by "Try the demo", deleted after 24 hours
   isDemo         Boolean           @default(false)
+  // When the user finished (or skipped) the welcome setup. Null sends them to /welcome.
+  onboardedAt    DateTime?
   createdAt      DateTime          @default(now())
 
   @@index([isDemo, createdAt])

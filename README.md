@@ -32,7 +32,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ## What works today
 
-- Sign in with GitHub, or try a demo account with sample data.
+- Sign in with GitHub, or try a demo account with sample data. A new account starts with a short setup: your working hours and days off, and a few first tasks.
 - Add tasks and fixed commitments (events, such as appointments or lectures) from one quick-add bar at the top of the page. Each task has a title, a time estimate, a priority (low, medium or high) and an optional due date and time.
 - Click an upcoming hour or a free slot on the timeline to add an event there, and click any block to edit it, mark it as done or delete it.
 - Make an event repeat every week, such as a lecture or a gym session. Edit or delete just one week of it, or every week at once.
@@ -147,6 +147,6 @@ npm test              # Vitest
 npm run test:e2e      # Playwright (needs the database running)
 ```
 
-The end-to-end tests in `e2e/` drive the real app in Chromium against a real database. Each test starts its own demo account and covers a flow people actually use: adding and finishing tasks, the focus timer, weekly events (adding, moving every week, deleting one week), working hours and days off, the theme switch, and the phone's Now card. The browser's timezone is chosen so it's always mid-morning there, so the demo has a full day planned whenever the tests run. The first time, install the browser with `npx playwright install chromium`.
+The end-to-end tests in `e2e/` drive the real app in Chromium against a real database. Each test starts its own demo account and covers a flow people actually use: adding and finishing tasks, the focus timer, weekly events (adding, moving every week, deleting one week), working hours and days off, the theme switch, and the phone's Now card. The browser's timezone is chosen so it's always mid-morning there, so the demo has a full day planned whenever the tests run. The first time, install the browser with `npx playwright install chromium`. The tests start their own dev server; if `npm run dev` is already running, Next.js won't start a second one, so point the tests at yours instead: `E2E_BASE_URL=http://localhost:3000 npm run test:e2e`.
 
 GitHub Actions runs all of these on every push to `main` and every pull request: the checks and a production build in one job, and the end-to-end tests against a Postgres service in another.
