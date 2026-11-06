@@ -38,6 +38,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks, a line marking the current time, and warnings for anything that doesn't fit or won't make its deadline.
 - Use a focus timer on any task. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
 - A summary of the day: time focused, tasks completed versus planned, and time still scheduled.
+- Light and dark themes. By default Orbit follows your device's setting; the switch in the header can fix it to light or dark, and the choice is remembered.
 
 ## Design decisions
 
@@ -46,6 +47,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - **Times are stored as instants and planned in the visitor's timezone.** The server runs in UTC, so "today", "09:00" and "Friday" are worked out in the visitor's own timezone by small `Intl`-based helpers (`src/lib/time/zoned.ts`), which are tested across Melbourne's daylight-saving changes. The browser saves its timezone in a cookie. Until it has, Vercel's IP-based guess is used.
 - **Time is stored in whole minutes.** Durations are integers, which avoids floating-point drift when times are added up and subtracted.
 - **Demo accounts are ordinary users.** "Try the demo" creates a user flagged `isDemo`, fills it from a pure seed function, and creates an Auth.js database session for it. Each visitor gets their own account, and everything else (including the per-user scoping) works exactly as for a GitHub user. Demo accounts older than 24 hours are deleted the next time someone starts a demo.
+- **Colours are role tokens.** Components use utilities such as `bg-surface` and `text-muted`, which read CSS variables defined in `globals.css`. Dark mode only swaps those variables, so no component needs `dark:` classes. The chosen theme is kept in a cookie, so the server renders the right one straight away, without a flash of the wrong colours.
 - **No experimental React features.** I've left the React Compiler and Cache Components switched off, so state and memoization are handled by hand.
 
 ## Known limitations
