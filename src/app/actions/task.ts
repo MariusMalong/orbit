@@ -122,24 +122,3 @@ export async function updateTask(formData: FormData) {
 
   revalidatePath('/', 'layout');
 }
-
-// The quick fix offered when a task won't meet its deadline: raising its
-// priority makes the planner fit it in sooner.
-export async function raiseTaskPriority(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
-  }
-
-  const taskId = formData.get('taskId') as string;
-
-  await prisma.task.updateMany({
-    where: {
-      id: taskId,
-      userId: session.user.id, // Strict data isolation
-    },
-    data: { priority: 3 },
-  });
-
-  revalidatePath('/', 'layout');
-}

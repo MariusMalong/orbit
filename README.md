@@ -26,7 +26,15 @@ For each day it:
 4. Walks through the free windows, placing each task in the earliest space available. A task that doesn't fit in one window is split across the next ones, but never into a block shorter than 15 minutes: a gap too small to be useful is left empty, and a split is shortened if it would leave a sliver behind.
 5. Marks any task that still has time left over at the end of the day as "bumped", and any task that won't be finished by its deadline as "late", so the UI can warn you.
 
-That's one day. `generateMultiDaySchedule` ([`src/lib/engine/multi-day.ts`](src/lib/engine/multi-day.ts)) runs it over the next 7 days, each with its own working hours. Whatever doesn't fit one day carries over to the next, and "due today" means due by the end of that particular day, so a task due on Wednesday is planned by priority on Monday and Tuesday and jumps the queue on Wednesday. Deadlines are checked against when each task actually finishes, so a task due on Wednesday that won't make it is flagged on Monday.
+That's one day. `generateMultiDaySchedule` ([`src/lib/engine/multi-day.ts`](src/lib/engine/multi-day.ts)) runs it over the next 7 days, each with its own working hours, and whatever doesn't fit one day carries over to the next.
+
+On its own, rolling forward like that would leave a big task due on Wednesday until Wednesday. So each day starts by planning backwards from the deadlines ([`src/lib/engine/reservations.ts`](src/lib/engine/reservations.ts)):
+
+1. For each task with a deadline, work out how much of it **must** happen today: whatever won't fit into the free working time between tomorrow and its deadline.
+2. Take the tasks earliest deadline first, and count each one together with everything due before it, so two tasks can't both rely on the same spare hours later in the week. This is the standard feasibility check for earliest-deadline-first scheduling, applied one day at a time.
+3. Plan those must-do pieces first, then fill the rest of the day by priority as usual.
+
+Work is only pulled forward when it's really needed, so when there's room later, your priorities decide. The Week page compares the plan with one made by priority alone ([`src/lib/engine/changes.ts`](src/lib/engine/changes.ts)) and says what started early for a deadline and what moved later to make room. Deadlines are then checked against when each task actually finishes, so a task that can't make it even when started as early as possible is flagged straight away.
 
 The plan isn't stored. It's recalculated on every page load from the current data, so editing a task, adding a meeting or logging time changes it immediately.
 
@@ -38,7 +46,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Make an event repeat every week, such as a lecture or a gym session. Edit or delete just one week of it, or every week at once.
 - Set your working hours for the whole week in one place, and mark days off: nothing gets planned on them, and work moves to the next working day.
 - See whatever doesn't fit today planned into the following days, next to your upcoming events, under "Coming up", and how full each day of the week is.
-- See the next 7 days side by side on the Week page, with how full each day is. When a task won't meet its deadline and raising its priority would get it done in time, one click does that; Orbit checks by planning the week again first.
+- See the next 7 days side by side on the Week page, with how full each day is. Tasks with deadlines are started as early as they need to be, and the page says what started early and what moved later to make room.
 - See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks, a line marking the current time, and warnings for anything that doesn't fit or won't make its deadline.
 - On a phone, see what to do now at the top of the page, with a large Start focus button and the next few things after it.
 - Use a focus timer on any task from the task list. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
@@ -60,7 +68,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ## Known limitations
 
-- The week plan flags a deadline it can't meet, but doesn't reshuffle earlier days to rescue the task. Raising the task's priority does.
+- Deadlines are planned for within the 7-day window. A task due further out is planned by priority until its deadline comes into the window.
 - Until you change them, every day is a 09:00–17:00 workday, weekends included.
 - Tasks with the same priority (and no deadline today) are planned in the order they were added, newest first, not by length.
 

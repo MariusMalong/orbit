@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import type { SchedulableTask, TimeWindow } from '@/lib/engine/scheduler';
 import { generateMultiDaySchedule } from '@/lib/engine/multi-day';
+import { deadlineChanges } from '@/lib/engine/changes';
 import { buildPlanningDays, type WeeklyHours } from '@/lib/planning/days';
 import { dayLoads } from '@/lib/planning/load';
 import { completeWeek } from '@/lib/planning/weekly-hours';
@@ -85,6 +86,12 @@ export async function loadPlan(userId: string) {
   // whatever doesn't fit rolls into the following days, and deadlines are
   // checked against when each task will actually finish.
   const plan = generateMultiDaySchedule(tasks, busy, days);
+  // The same week planned by priority alone, to show what planning around
+  // deadlines changed (what started early, and what moved later for it).
+  const changes = deadlineChanges(
+    plan,
+    generateMultiDaySchedule(tasks, busy, days, { planForDeadlines: false })
+  );
 
   // How full each day is.
   const loads = dayLoads(
@@ -106,6 +113,7 @@ export async function loadPlan(userId: string) {
     days,
     week: completeWeek(weeklyHours), // For the working-hours editor
     plan,
+    changes,
     loads,
   };
 }
