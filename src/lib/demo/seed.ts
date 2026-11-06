@@ -1,12 +1,17 @@
-import { atZonedTime } from '@/lib/time/zoned';
+import { getZonedParts, zonedWallTimeToDate } from '@/lib/time/zoned';
 
 // Sample data for "Try the demo" accounts.
 //
 // Pure and deterministic: given the current time it returns plain objects, and
-// the server action writes them to the database. The numbers are chosen so the
-// default 09:00–17:00 workday shows off the engine: tasks are split around
-// commitments, and the lowest-priority task doesn't fit and gets bumped
-// (see seed.test.ts, which checks this against the real scheduler).
+// the server action writes them to the database.
+//
+// The dashboard plans from the current time, so a fixed 09:00–17:00 day would
+// be empty or over for anyone visiting in the evening. Instead the demo's
+// workday starts 30–60 minutes before the visitor arrives, and everything is
+// placed relative to that start. Every visitor sees the same shape of day: a
+// commitment coming up soon, tasks split around commitments, and one or two
+// low-priority tasks that don't fit (see seed.test.ts, which checks this
+// against the real scheduler).
 
 export type DemoTimeEntry = {
   startTime: Date;
@@ -19,6 +24,7 @@ export type DemoTask = {
   priority: number; // 3 = High, 1 = Low
   durationEstimate: number; // Minutes still to do, like a real task after focus time is logged
   status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED';
+  completedAt: Date | null;
   timeEntries: DemoTimeEntry[];
 };
 
@@ -28,64 +34,76 @@ export type DemoCommitment = {
   endTime: Date;
 };
 
+export type DemoAvailability = {
+  dayOfWeek: number; // 0 = Sunday
+  startTime: string; // "HH:MM"
+  endTime: string; // "HH:MM"
+};
+
 export type DemoData = {
+  availability: DemoAvailability;
   tasks: DemoTask[];
   commitments: DemoCommitment[];
 };
 
-function entry(
-  day: Date,
-  start: string,
-  minutes: number,
-  timeZone: string
-): DemoTimeEntry {
-  const startTime = atZonedTime(day, start, timeZone);
-  return {
-    startTime,
-    endTime: new Date(startTime.getTime() + minutes * 60_000),
-    duration: minutes,
-  };
-}
+const WORKDAY_MINUTES = 8 * 60;
+// The workday has to end on the same day, so it can't start after 15:00.
+const LATEST_START_MINUTES = 24 * 60 - WORKDAY_MINUTES - 60;
+
+const toHHMM = (minutesOfDay: number) =>
+  `${String(Math.floor(minutesOfDay / 60)).padStart(2, '0')}:${String(minutesOfDay % 60).padStart(2, '0')}`;
 
 /**
- * A day of sample data for `now`'s date in the visitor's `timeZone`, which is
- * also how the dashboard builds the workday.
+ * The minute of the day (in the visitor's timezone) the demo workday starts:
+ * the half hour before the current one, so "now" is 30–60 minutes in.
  */
+export function demoWorkdayStart(now: Date, timeZone: string): number {
+  const { hour, minute } = getZonedParts(now, timeZone);
+  const currentHalfHour = Math.floor((hour * 60 + minute) / 30) * 30;
+  return Math.min(Math.max(currentHalfHour - 30, 0), LATEST_START_MINUTES);
+}
+
 export function buildDemoData(now: Date, timeZone: string): DemoData {
-  const on = (hhmm: string) => atZonedTime(now, hhmm, timeZone);
+  const { year, month, day, weekday } = getZonedParts(now, timeZone);
+  const startMinute = demoWorkdayStart(now, timeZone);
+
+  // A time `offset` minutes into the demo workday.
+  const at = (offset: number) =>
+    zonedWallTimeToDate(year, month, day, 0, startMinute + offset, timeZone);
+  // A time `minutes` before now, for focus time already logged today. (In the
+  // first hour or so after midnight this lands on the previous day, so the
+  // stats just count less of it.)
+  const ago = (minutes: number) => new Date(now.getTime() - minutes * 60_000);
+
+  const availability: DemoAvailability = {
+    dayOfWeek: weekday,
+    startTime: toHHMM(startMinute),
+    endTime: toHHMM(startMinute + WORKDAY_MINUTES),
+  };
 
   const commitments: DemoCommitment[] = [
-    {
-      title: 'Team check-in',
-      startTime: on('09:30'),
-      endTime: on('10:00'),
-    },
-    {
-      title: 'Lunch with Sam',
-      startTime: on('12:30'),
-      endTime: on('13:30'),
-    },
-    {
-      title: 'Dentist appointment',
-      startTime: on('15:30'),
-      endTime: on('16:30'),
-    },
+    // Starts 30–60 minutes after now, so the first block is a useful length.
+    { title: 'Team check-in', startTime: at(90), endTime: at(120) },
+    { title: 'Coffee with Sam', startTime: at(210), endTime: at(270) },
+    { title: 'Dentist appointment', startTime: at(390), endTime: at(450) },
   ];
 
   const tasks: DemoTask[] = [
     {
-      // Started earlier: 45 of 150 minutes already logged with the focus timer.
+      // Started earlier: 75 of 150 minutes already logged with the focus timer.
       title: 'Finish the quarterly report',
       priority: 3,
-      durationEstimate: 105,
+      durationEstimate: 75,
       status: 'IN_PROGRESS',
-      timeEntries: [entry(now, '07:30', 45, timeZone)],
+      completedAt: null,
+      timeEntries: [{ startTime: ago(90), endTime: ago(15), duration: 75 }],
     },
     {
       title: "Prepare slides for Thursday's review",
       priority: 3,
       durationEstimate: 90,
       status: 'TODO',
+      completedAt: null,
       timeEntries: [],
     },
     {
@@ -93,6 +111,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       priority: 2,
       durationEstimate: 60,
       status: 'TODO',
+      completedAt: null,
       timeEntries: [],
     },
     {
@@ -100,6 +119,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       priority: 2,
       durationEstimate: 30,
       status: 'TODO',
+      completedAt: null,
       timeEntries: [],
     },
     {
@@ -107,6 +127,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       priority: 1,
       durationEstimate: 20,
       status: 'TODO',
+      completedAt: null,
       timeEntries: [],
     },
     {
@@ -114,17 +135,19 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       priority: 1,
       durationEstimate: 45,
       status: 'TODO',
+      completedAt: null,
       timeEntries: [],
     },
     {
-      // Already done today, so the daily summary isn't empty.
+      // Just finished, so the daily summary isn't empty.
       title: 'Pay the electricity bill',
       priority: 2,
       durationEstimate: 0,
       status: 'COMPLETED',
-      timeEntries: [entry(now, '08:15', 15, timeZone)],
+      completedAt: now,
+      timeEntries: [{ startTime: ago(15), endTime: now, duration: 15 }],
     },
   ];
 
-  return { tasks, commitments };
+  return { availability, tasks, commitments };
 }
