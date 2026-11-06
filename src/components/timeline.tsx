@@ -9,18 +9,13 @@ import { addMinutesToClock, toDateKey } from '@/lib/time/clock';
 import { panel } from '@/components/ui-classes';
 import { EventMenu, MenuHeading, TaskMenu } from '@/components/item-menus';
 import { AddEventButton } from '@/components/quick-add';
-
-interface TimelineCommitment {
-  id: string;
-  title: string;
-  start: Date;
-  end: Date;
-}
+import type { EventOccurrence } from '@/lib/planning/recurrence';
+import { RepeatIcon } from '@/components/repeat-icon';
 
 interface TimelineProps {
   scheduledBlocks: ScheduleBlockResult[];
   tasks: SchedulableTask[];
-  commitments: TimelineCommitment[];
+  commitments: EventOccurrence[];
   workDayStart: Date;
   workDayEnd: Date;
   isDayOff: boolean; // Nothing is planned; events still show
@@ -214,16 +209,20 @@ export function Timeline({
           const height = offsetPx(c.drawEnd) - offsetPx(c.drawStart);
           return (
             <EventMenu
-              key={c.id}
+              key={c.key}
               commitment={{
                 id: c.id,
                 title: c.title,
                 startTime: c.start,
                 endTime: c.end,
+                repeatsWeekly: c.repeatsWeekly,
               }}
-              label={`${c.title}, ${time}. Edit or delete`}
+              label={`${c.title}, ${time}${c.repeatsWeekly ? ', every week' : ''}. Edit or delete`}
               heading={
-                <MenuHeading title={c.title} detail={`${time} · Fixed`} />
+                <MenuHeading
+                  title={c.title}
+                  detail={`${time} · ${c.repeatsWeekly ? 'Weekly' : 'Fixed'}`}
+                />
               }
               className="absolute right-1 left-16"
               style={{ top: offsetPx(c.drawStart), height }}
@@ -232,10 +231,11 @@ export function Timeline({
                 <>
                   <span className="block truncate text-sm font-medium text-ink-2">
                     {c.title}
+                    {c.repeatsWeekly && <RepeatIcon />}
                   </span>
                   {height >= 44 && (
                     <span className="block text-xs text-muted">
-                      {time} · Fixed
+                      {time} · {c.repeatsWeekly ? 'Weekly' : 'Fixed'}
                     </span>
                   )}
                 </>

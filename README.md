@@ -35,6 +35,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Sign in with GitHub, or try a demo account with sample data.
 - Add tasks and fixed commitments (events, such as appointments or lectures) from one quick-add bar at the top of the page. Each task has a title, a time estimate, a priority (low, medium or high) and an optional due date and time.
 - Click an upcoming hour or a free slot on the timeline to add an event there, and click any block to edit it, mark it as done or delete it.
+- Make an event repeat every week, such as a lecture or a gym session. Edit or delete just one week of it, or every week at once.
 - Set your working hours for the whole week in one place, and mark days off: nothing gets planned on them, and work moves to the next working day.
 - See whatever doesn't fit today planned into the following days, next to your upcoming events, under "Coming up", and how full each day of the week is.
 - See the next 7 days side by side on the Week page, with how full each day is. When a task won't meet its deadline and raising its priority would get it done in time, one click does that; Orbit checks by planning the week again first.
@@ -48,6 +49,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 - **The engine is decoupled from the database.** Pages read from Prisma, convert the rows into small engine types (`SchedulableTask`, `TimeWindow`), and pass those in. The analytics summary (`src/lib/analytics/summarize.ts`) follows the same pattern.
 - **Every query is scoped to the signed-in user.** Server Actions take the user ID from the server-side session, never from the request, and filter every read and write by it. `TimeEntry` has no user column, so it's checked through its parent task, both when an entry is created and when entries are read.
+- **Weekly events are stored once and expanded when planning.** A weekly event keeps its first occurrence plus a list of weeks skipped or moved on their own, so editing one week never rewrites the others. Weeks are counted in the visitor's timezone, so a 09:00 lecture stays at 09:00 across daylight-saving changes (`src/lib/planning/recurrence.ts`).
 - **Times are stored as instants and planned in the visitor's timezone.** The server runs in UTC, so "today", "09:00" and "Friday" are worked out in the visitor's own timezone by small `Intl`-based helpers (`src/lib/time/zoned.ts`), which are tested across Melbourne's daylight-saving changes. The browser saves its timezone in a cookie. Until it has, Vercel's IP-based guess is used.
 - **Time is stored in whole minutes.** Durations are integers, which avoids floating-point drift when times are added up and subtracted.
 - **Demo accounts are ordinary users.** "Try the demo" creates a user flagged `isDemo`, fills it from a pure seed function, and creates an Auth.js database session for it. Each visitor gets their own account, and everything else (including the per-user scoping) works exactly as for a GitHub user. Demo accounts older than 24 hours are deleted the next time someone starts a demo.

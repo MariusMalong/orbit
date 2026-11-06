@@ -4,26 +4,21 @@ import type { PlanningDayInfo } from '@/lib/planning/days';
 import { formatClock, formatShortDay, PRIORITY_LABELS } from '@/lib/format';
 import { panel } from '@/components/ui-classes';
 import { EventMenu, MenuHeading, TaskMenu } from '@/components/item-menus';
-
-interface ComingUpEvent {
-  id: string;
-  title: string;
-  start: Date;
-  end: Date;
-}
+import type { EventOccurrence } from '@/lib/planning/recurrence';
+import { RepeatIcon } from '@/components/repeat-icon';
 
 interface ComingUpProps {
   days: PlanningDayInfo[]; // The days after today
   blocks: DayBlock[]; // Blocks on those days; dayIndex counts from today (0)
   tasks: SchedulableTask[];
-  events: ComingUpEvent[]; // Events that start after today, in time order
+  events: EventOccurrence[]; // Events that start after today, in time order
   lateTaskIds: string[];
   timeZone: string;
 }
 
 type Item =
   | { kind: 'task'; start: Date; end: Date; task: SchedulableTask }
-  | { kind: 'event'; start: Date; end: Date; event: ComingUpEvent };
+  | { kind: 'event'; start: Date; end: Date; event: EventOccurrence };
 
 const rowClass =
   'flex w-full cursor-pointer flex-wrap items-center gap-x-3 gap-y-0.5 rounded-lg px-3 py-2 text-left text-sm transition ' +
@@ -45,7 +40,7 @@ export function ComingUp({
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const late = new Set(lateTaskIds);
 
-  const toItem = (event: ComingUpEvent): Item => ({
+  const toItem = (event: EventOccurrence): Item => ({
     kind: 'event',
     start: event.start,
     end: event.end,
@@ -130,15 +125,16 @@ export function ComingUp({
                 if (item.kind === 'event') {
                   const { event } = item;
                   return (
-                    <li key={`event-${event.id}`}>
+                    <li key={`event-${event.key}`}>
                       <EventMenu
                         commitment={{
                           id: event.id,
                           title: event.title,
                           startTime: event.start,
                           endTime: event.end,
+                          repeatsWeekly: event.repeatsWeekly,
                         }}
-                        label={`${event.title}, ${time}. Edit or delete`}
+                        label={`${event.title}, ${time}${event.repeatsWeekly ? ', every week' : ''}. Edit or delete`}
                         heading={
                           <MenuHeading
                             title={event.title}
@@ -152,9 +148,10 @@ export function ComingUp({
                             {timeLabel}
                             <span className="min-w-0 flex-1 truncate font-medium text-ink-2">
                               {event.title}
+                              {event.repeatsWeekly && <RepeatIcon />}
                             </span>
                             <span className="shrink-0 text-xs text-muted">
-                              Fixed
+                              {event.repeatsWeekly ? 'Weekly' : 'Fixed'}
                             </span>
                           </>
                         }
