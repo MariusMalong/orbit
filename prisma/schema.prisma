@@ -112,9 +112,11 @@ model FixedCommitment {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title     String
-  startTime DateTime
-  endTime   DateTime
+  title         String
+  startTime     DateTime // The first occurrence, for a weekly event
+  endTime       DateTime
+  repeatsWeekly Boolean    @default(false) // Same weekday and time every week, in the user's timezone
+  skippedStarts DateTime[] @default([]) // Weekly occurrences deleted or moved on their own, by start time
 }
 
 model Availability {
