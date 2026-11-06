@@ -9,6 +9,7 @@ import { buttonSecondary } from '@/components/ui-classes';
 import { formatDayRange, formatDue } from '@/lib/format';
 import { loadPlan } from '@/lib/planning/load-plan';
 import type { SchedulableTask } from '@/lib/engine/scheduler';
+import { raisingPriorityHelps } from '@/lib/engine/rescue';
 import { toDateKey } from '@/lib/time/clock';
 
 export const metadata: Metadata = {
@@ -32,12 +33,14 @@ export default async function WeekPage() {
       plan.unscheduledTaskIds.includes(t.id) && !plan.lateTaskIds.includes(t.id)
   );
 
-  // An overdue task is already planned first, so raising its priority
-  // wouldn't change anything. Otherwise, a higher priority plans it sooner.
+  // An overdue task is already planned first, so raising its priority can't
+  // help. Otherwise the button is only offered when re-planning with the task
+  // at high priority gets it done in time without making anything else late.
+  const busy = commitments.map((c) => ({ start: c.start, end: c.end }));
   const isOverdue = (task: SchedulableTask) =>
     !!task.deadline && task.deadline <= now;
   const canRaise = (task: SchedulableTask) =>
-    !isOverdue(task) && task.priority < 3;
+    !isOverdue(task) && raisingPriorityHelps(task.id, tasks, busy, days);
   const lateMessage = (task: SchedulableTask) => {
     const due = task.deadline
       ? formatDue(task.deadline, now, timeZone).replace(/^Due /, '')
@@ -45,9 +48,12 @@ export default async function WeekPage() {
     if (isOverdue(task)) {
       return `was due ${due}. It's planned as soon as possible.`;
     }
-    return canRaise(task)
-      ? `won't be done by ${due}. Raising its priority plans it sooner.`
-      : `won't be done by ${due}, even at high priority. Free up time or extend your hours.`;
+    if (canRaise(task)) {
+      return `won't be done by ${due}. Making it high priority gets it done in time.`;
+    }
+    return task.priority >= 3
+      ? `won't be done by ${due}, even at high priority. Free up time or change your working hours.`
+      : `won't be done by ${due}, and raising its priority wouldn't fix that. Free up time or change your working hours.`;
   };
 
   return (

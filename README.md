@@ -35,7 +35,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Click an upcoming hour or a free slot on the timeline to add an event there, and click any block to edit it, mark it as done or delete it.
 - Set your working hours for the whole week in one place, and mark days off: nothing gets planned on them, and work moves to the next working day.
 - See whatever doesn't fit today planned into the following days, next to your upcoming events, under "Coming up", and how full each day of the week is.
-- See the next 7 days side by side on the Week page, with how full each day is. When a task won't meet its deadline, one click raises its priority so it's planned sooner.
+- See the next 7 days side by side on the Week page, with how full each day is. When a task won't meet its deadline and raising its priority would get it done in time, one click does that; Orbit checks by planning the week again first.
 - See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks, a line marking the current time, and warnings for anything that doesn't fit or won't make its deadline.
 - On a phone, see what to do now at the top of the page, with a large Start focus button and the next few things after it.
 - Use a focus timer on any task from the task list. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
