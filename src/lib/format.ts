@@ -1,5 +1,7 @@
 // Display formatting helpers. Data stays as Dates and integer minutes; these only render it.
 
+import { getZonedParts } from '@/lib/time/zoned';
+
 // Server components pass the visitor's timezone; without one, the runtime's
 // own timezone is used (the browser's, in client components).
 
@@ -20,6 +22,17 @@ export function formatShortDay(date: Date, timeZone?: string): string {
     month: 'short',
     timeZone,
   });
+}
+
+/** "Due 11:00" when the deadline is today, otherwise "Due Mon 9 Nov, 17:00". */
+export function formatDue(deadline: Date, now: Date, timeZone: string): string {
+  const d = getZonedParts(deadline, timeZone);
+  const n = getZonedParts(now, timeZone);
+  const isToday = d.year === n.year && d.month === n.month && d.day === n.day;
+  const time = formatClock(deadline, timeZone);
+  return isToday
+    ? `Due ${time}`
+    : `Due ${formatShortDay(deadline, timeZone)}, ${time}`;
 }
 
 /** Local date-time in the format a datetime-local input expects, e.g. "2026-11-05T14:30". */

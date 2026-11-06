@@ -1,5 +1,5 @@
 import { ScheduleBlockResult, SchedulableTask } from '@/lib/engine/scheduler';
-import { formatClock } from '@/lib/format';
+import { formatClock, formatDue } from '@/lib/format';
 import { getZonedParts } from '@/lib/time/zoned';
 import { panel } from '@/components/ui-classes';
 
@@ -13,6 +13,7 @@ interface TimelineCommitment {
 interface TimelineProps {
   scheduledBlocks: ScheduleBlockResult[];
   bumpedTaskIds: string[];
+  lateTaskIds: string[];
   tasks: SchedulableTask[];
   commitments: TimelineCommitment[];
   workDayStart: Date;
@@ -32,6 +33,7 @@ const MS_PER_HOUR = 3_600_000;
 export function Timeline({
   scheduledBlocks,
   bumpedTaskIds,
+  lateTaskIds,
   tasks,
   commitments,
   workDayStart,
@@ -44,6 +46,9 @@ export function Timeline({
   // Quick lookup map to resolve task titles and priorities by ID
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const bumpedTasks = bumpedTaskIds
+    .map((id) => taskMap.get(id))
+    .filter(Boolean) as SchedulableTask[];
+  const lateTasks = lateTaskIds
     .map((id) => taskMap.get(id))
     .filter(Boolean) as SchedulableTask[];
 
@@ -105,6 +110,28 @@ export function Timeline({
         </div>
         {headerAction}
       </div>
+
+      {/* Deadline warning: tasks that won't be finished by their deadline */}
+      {lateTasks.length > 0 && (
+        <div
+          role="status"
+          className="rounded-lg border border-danger/40 bg-danger/5 p-4 text-danger"
+        >
+          <p className="text-sm font-semibold">
+            {lateTasks.length === 1 ? '1 task' : `${lateTasks.length} tasks`}{' '}
+            won&apos;t be done by the deadline
+          </p>
+          <ul className="mt-2 flex flex-col gap-0.5 text-sm">
+            {lateTasks.map((task) => (
+              <li key={task.id}>
+                {task.title}
+                {task.deadline &&
+                  ` · ${formatDue(task.deadline, now, timeZone).toLowerCase()}`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Spillover warning: tasks the engine could not fit inside the workday */}
       {bumpedTasks.length > 0 && (
