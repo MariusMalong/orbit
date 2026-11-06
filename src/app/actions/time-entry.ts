@@ -49,5 +49,5 @@ export async function logTimeEntry(formData: FormData) {
   });
 
   // Re-render the dashboard so the schedule uses the new estimate
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
