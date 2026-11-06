@@ -5,10 +5,8 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { buildDemoData } from '@/lib/demo/seed';
+import { DEMO_LIFETIME_MS, expiredDemoUsers } from '@/lib/demo/limits';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
-
-// Demo accounts, and their sessions, last this long.
-const DEMO_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
 /**
  * "Try the demo": creates a temporary account filled with sample data and
@@ -24,13 +22,7 @@ export async function startDemo() {
 
   // Clean up demo accounts older than a day. Deleting the user cascades to
   // their tasks, commitments, time entries and sessions.
-  await prisma.user.deleteMany({
-    where: {
-      isDemo: true,
-      onboardedAt: now, // The demo comes set up, so it skips /welcome
-      createdAt: { lt: new Date(now.getTime() - DEMO_LIFETIME_MS) },
-    },
-  });
+  await prisma.user.deleteMany({ where: expiredDemoUsers(now) });
 
   const { availability, tasks, commitments } = buildDemoData(
     now,
