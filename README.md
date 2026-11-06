@@ -24,6 +24,8 @@ For each day it:
 4. Walks through the free windows, placing each task in the earliest space available. A task that doesn't fit in one window is split across the next ones, but never into a block shorter than 15 minutes: a gap too small to be useful is left empty, and a split is shortened if it would leave a sliver behind.
 5. Marks any task that still has time left over at the end of the day as "bumped", and any task that won't be finished by its deadline as "late", so the UI can warn you.
 
+That's one day. `generateMultiDaySchedule` ([`src/lib/engine/multi-day.ts`](src/lib/engine/multi-day.ts)) runs it over the next 7 days, each with its own working hours. Whatever doesn't fit one day carries over to the next, and "due today" means due by the end of that particular day, so a task due on Wednesday is planned by priority on Monday and Tuesday and jumps the queue on Wednesday. Deadlines are checked against when each task actually finishes, so a task due on Wednesday that won't make it is flagged on Monday.
+
 The plan isn't stored. It's recalculated on every page load from the current data, so editing a task, adding a meeting or logging time changes it immediately.
 
 ## What works today
@@ -32,6 +34,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Add, edit, complete and delete tasks. Each task has a title, a time estimate in minutes, a priority (low, medium or high) and an optional due date and time.
 - Add, edit and delete fixed commitments, such as appointments or lectures.
 - Set your working hours separately for each day of the week.
+- See whatever doesn't fit today planned into the following days, under "Coming up".
 - See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks, a line marking the current time, and warnings for anything that doesn't fit or won't make its deadline.
 - Use a focus timer on any task. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
 - A summary of the day: time focused, tasks completed versus planned, and time still scheduled.
@@ -47,12 +50,15 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ## Known limitations
 
-- Tasks that don't fit today aren't planned into the following days, so the engine can only tell you a task due later this week is at risk once it's due today.
+- The week plan flags a deadline it can't meet, but doesn't reshuffle earlier days to rescue the task. Raising the task's priority does.
+- Every day defaults to 09:00–17:00, weekends included, because there's no way to mark a day off yet.
+- Tasks with the same priority (and no deadline today) are planned in the order they were added, newest first, not by length.
 - Starting a demo isn't rate-limited, so the only cap on demo accounts is the 24-hour cleanup.
 
 ## Next steps
 
-- Plan several days ahead, so tasks that don't fit today roll into the next working days, and deadlines later in the week can be checked early.
+- Days off, so weekends aren't planned as workdays.
+- When a deadline later in the week is at risk, plan backwards from it and pull the task into earlier days, instead of only flagging it.
 - Projects for grouping tasks, and saved schedules. The `Project`, `Schedule` and `ScheduleBlock` models are already in the schema but aren't used yet.
 
 ## Tech stack
