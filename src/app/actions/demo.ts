@@ -27,6 +27,7 @@ export async function startDemo() {
   await prisma.user.deleteMany({
     where: {
       isDemo: true,
+      onboardedAt: now, // The demo comes set up, so it skips /welcome
       createdAt: { lt: new Date(now.getTime() - DEMO_LIFETIME_MS) },
     },
   });
@@ -43,6 +44,7 @@ export async function startDemo() {
       name: 'Demo visitor',
       email: `demo-${randomUUID()}@demo.invalid`,
       isDemo: true,
+      onboardedAt: now, // The demo comes set up, so it skips /welcome
       availabilities: { create: availability },
       commitments: { create: commitments },
       tasks: {
