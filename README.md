@@ -10,6 +10,8 @@ Click **Try the demo** to get your own temporary account, filled with a day of s
 
 ![Orbit's Today page in a demo account: a quick-add bar for tasks and events, the rest of the day planned from now around fixed events with a task due today first, and a compact task list](docs/images/dashboard.png)
 
+![The Week page in dark mode: the next 7 days side by side with the weekend off, how full each day is, and a warning that the grant application won't make its Sunday deadline](docs/images/week.png)
+
 I'm building it to learn how to design a scheduling algorithm properly and to practise full-stack patterns in a real multi-user app. It's a work in progress.
 
 ## How the scheduler works
