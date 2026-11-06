@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { expandEvents, moveSeries, type StoredEvent } from './recurrence';
+import {
+  addSkippedStart,
+  expandEvents,
+  moveSeries,
+  type StoredEvent,
+} from './recurrence';
 
 const MELBOURNE = 'Australia/Melbourne'; // +10, or +11 from 4 Oct 2026
 const utc = (iso: string) => new Date(`${iso}Z`);
@@ -147,5 +152,31 @@ describe('moveSeries', () => {
       startTime: event().startTime,
       endTime: event().endTime,
     });
+  });
+});
+
+describe('addSkippedStart', () => {
+  const now = utc('2026-10-20T00:00:00');
+
+  it('adds the new skip and drops ones that are long past', () => {
+    expect(
+      addSkippedStart(
+        [utc('2026-09-29T08:00:00'), utc('2026-10-27T07:00:00')],
+        utc('2026-10-20T07:00:00'),
+        now
+      )
+    ).toEqual([utc('2026-10-20T07:00:00'), utc('2026-10-27T07:00:00')]);
+  });
+
+  it('keeps a skip from earlier today', () => {
+    const earlierToday = utc('2026-10-19T22:00:00');
+    expect(
+      addSkippedStart([earlierToday], utc('2026-10-27T07:00:00'), now)
+    ).toContainEqual(earlierToday);
+  });
+
+  it('does not add the same week twice', () => {
+    const week = utc('2026-10-27T07:00:00');
+    expect(addSkippedStart([week], week, now)).toEqual([week]);
   });
 });

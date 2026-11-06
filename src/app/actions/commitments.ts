@@ -5,7 +5,7 @@ import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
 import { parseDateTimeLocal } from '@/lib/time/zoned';
-import { moveSeries } from '@/lib/planning/recurrence';
+import { addSkippedStart, moveSeries } from '@/lib/planning/recurrence';
 
 // datetime-local inputs send a wall-clock time with no timezone, like
 // "2026-11-06T12:30". It means 12:30 for the visitor, not for the server.
@@ -86,7 +86,13 @@ export async function deleteCommitment(formData: FormData) {
   if (event.repeatsWeekly && scope === 'this' && occurrenceStart) {
     await prisma.fixedCommitment.update({
       where: { id: event.id },
-      data: { skippedStarts: { push: occurrenceStart } },
+      data: {
+        skippedStarts: addSkippedStart(
+          event.skippedStarts,
+          occurrenceStart,
+          new Date()
+        ),
+      },
     });
   } else {
     await prisma.fixedCommitment.delete({ where: { id: event.id } });
@@ -127,7 +133,13 @@ export async function updateCommitment(formData: FormData) {
     await prisma.$transaction([
       prisma.fixedCommitment.update({
         where: { id: event.id },
-        data: { skippedStarts: { push: occurrenceStart } },
+        data: {
+          skippedStarts: addSkippedStart(
+            event.skippedStarts,
+            occurrenceStart,
+            new Date()
+          ),
+        },
       }),
       prisma.fixedCommitment.create({
         data: { title, startTime, endTime, userId },
