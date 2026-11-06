@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from 'node:crypto';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type Prisma } from '@prisma/client';
 import type { BrowserContext } from '@playwright/test';
 
 // Direct database access for tests that need a kind of user the UI can't
@@ -12,11 +12,14 @@ export const prisma = new PrismaClient();
  */
 export async function signInAsNewUser(
   context: BrowserContext,
-  baseURL: string
+  baseURL: string,
+  // Extra fields for the user, e.g. a finished setup and their own tasks.
+  extra: Omit<Prisma.UserCreateInput, 'email'> = {}
 ): Promise<string> {
   const sessionToken = randomBytes(32).toString('hex');
   const user = await prisma.user.create({
     data: {
+      ...extra,
       name: 'Ada Lovelace',
       email: `new-${randomUUID()}@e2e.invalid`,
       sessions: {
