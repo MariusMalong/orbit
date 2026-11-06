@@ -54,3 +54,32 @@ export const PRIORITY_LABELS: Record<number, string> = {
   2: 'Medium',
   3: 'High',
 };
+
+/**
+ * A span of days, e.g. "6–12 November", or "29 November – 5 December" when it
+ * crosses into another month.
+ */
+export function formatDayRange(
+  first: Date,
+  last: Date,
+  timeZone: string
+): string {
+  const day = (date: Date) =>
+    date.toLocaleDateString('en-GB', { day: 'numeric', timeZone });
+  const dayMonth = (date: Date) =>
+    date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      timeZone,
+    });
+  const month = (date: Date) =>
+    date.toLocaleDateString('en-GB', {
+      month: 'long',
+      year: 'numeric',
+      timeZone,
+    });
+
+  return month(first) === month(last)
+    ? `${day(first)}–${dayMonth(last)}`
+    : `${dayMonth(first)} – ${dayMonth(last)}`;
+}
