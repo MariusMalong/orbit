@@ -5,6 +5,7 @@ import { Timeline } from '@/components/timeline';
 import { WorkingHours } from '@/components/working-hours';
 import { ComingUp } from '@/components/coming-up';
 import { QuickAdd } from '@/components/quick-add';
+import { FocusProvider } from '@/components/focus-context';
 import { TaskList } from '@/components/task-list';
 import { WeekCard } from '@/components/week-card';
 import { summarizeDay } from '@/lib/analytics/summarize';
@@ -132,90 +133,92 @@ export default async function Home() {
   });
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-        <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
-          {todayLabel}
-        </h1>
-        <p className="text-muted tabular-nums">
-          {formatMinutes(summary.focusedMinutes)} focused ·{' '}
-          {summary.completedTasks} of {summary.plannedTasks} done ·{' '}
-          {formatMinutes(summary.scheduledMinutes)} planned
-        </p>
-        {session.user.isDemo && (
-          <p className="basis-full text-sm text-muted">
-            You&apos;re in a demo account filled with sample data. Change
-            anything you like: it&apos;s deleted after 24 hours.
+    <FocusProvider>
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
+            {todayLabel}
+          </h1>
+          <p className="text-muted tabular-nums">
+            {formatMinutes(summary.focusedMinutes)} focused ·{' '}
+            {summary.completedTasks} of {summary.plannedTasks} done ·{' '}
+            {formatMinutes(summary.scheduledMinutes)} planned
           </p>
-        )}
-      </div>
-
-      <QuickAdd today={toDateKey(today, timeZone)} />
-
-      <div className="flex flex-wrap items-start gap-5">
-        <div className="min-w-0 flex-[999_1_560px]">
-          <Timeline
-            scheduledBlocks={scheduledBlocks}
-            tasks={schedulableTasks}
-            commitments={commitments}
-            workDayStart={workDayStart}
-            workDayEnd={workDayEnd}
-            isDayOff={todayPlan.isDayOff}
-            now={today}
-            planStart={planStart}
-            timeZone={timeZone}
-            headerAction={
-              <WorkingHours
-                week={week}
-                label={
-                  todayPlan.isDayOff
-                    ? 'Today is a day off. Change working hours'
-                    : `Working hours today: ${todayPlan.hours.startTime} to ${todayPlan.hours.endTime}. Change working hours`
-                }
-                triggerClassName="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-sm text-ink tabular-nums transition hover:bg-subtle focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
-                trigger={
-                  <>
-                    <ClockIcon />
-                    {todayPlan.isDayOff
-                      ? 'Day off'
-                      : `${todayPlan.hours.startTime}–${todayPlan.hours.endTime}`}
-                  </>
-                }
-              />
-            }
-          />
-          <ComingUp
-            days={days.slice(1)}
-            blocks={laterBlocks}
-            tasks={schedulableTasks}
-            events={commitments.filter((c) => c.start >= startOfTomorrow)}
-            lateTaskIds={lateTaskIds}
-            timeZone={timeZone}
-          />
+          {session.user.isDemo && (
+            <p className="basis-full text-sm text-muted">
+              You&apos;re in a demo account filled with sample data. Change
+              anything you like: it&apos;s deleted after 24 hours.
+            </p>
+          )}
         </div>
 
-        <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-5">
-          <TaskList
-            tasks={rawTasks}
-            lateTaskIds={new Set(lateTaskIds)}
-            nextPlanned={nextPlanned}
-            tomorrow={startOfTomorrow}
-            now={today}
-            timeZone={timeZone}
-          />
-          <WeekCard
-            days={days}
-            loads={loads}
-            lateTasks={lateTasks}
-            leftovers={leftovers.map((l) => ({
-              id: l.task.id,
-              title: l.task.title,
-              continuesOn: l.continuesOn,
-            }))}
-            timeZone={timeZone}
-          />
+        <QuickAdd today={toDateKey(today, timeZone)} />
+
+        <div className="flex flex-wrap items-start gap-5">
+          <div className="min-w-0 flex-[999_1_560px]">
+            <Timeline
+              scheduledBlocks={scheduledBlocks}
+              tasks={schedulableTasks}
+              commitments={commitments}
+              workDayStart={workDayStart}
+              workDayEnd={workDayEnd}
+              isDayOff={todayPlan.isDayOff}
+              now={today}
+              planStart={planStart}
+              timeZone={timeZone}
+              headerAction={
+                <WorkingHours
+                  week={week}
+                  label={
+                    todayPlan.isDayOff
+                      ? 'Today is a day off. Change working hours'
+                      : `Working hours today: ${todayPlan.hours.startTime} to ${todayPlan.hours.endTime}. Change working hours`
+                  }
+                  triggerClassName="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-sm text-ink tabular-nums transition hover:bg-subtle focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+                  trigger={
+                    <>
+                      <ClockIcon />
+                      {todayPlan.isDayOff
+                        ? 'Day off'
+                        : `${todayPlan.hours.startTime}–${todayPlan.hours.endTime}`}
+                    </>
+                  }
+                />
+              }
+            />
+            <ComingUp
+              days={days.slice(1)}
+              blocks={laterBlocks}
+              tasks={schedulableTasks}
+              events={commitments.filter((c) => c.start >= startOfTomorrow)}
+              lateTaskIds={lateTaskIds}
+              timeZone={timeZone}
+            />
+          </div>
+
+          <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-5">
+            <TaskList
+              tasks={rawTasks}
+              lateTaskIds={new Set(lateTaskIds)}
+              nextPlanned={nextPlanned}
+              tomorrow={startOfTomorrow}
+              now={today}
+              timeZone={timeZone}
+            />
+            <WeekCard
+              days={days}
+              loads={loads}
+              lateTasks={lateTasks}
+              leftovers={leftovers.map((l) => ({
+                id: l.task.id,
+                title: l.task.title,
+                continuesOn: l.continuesOn,
+              }))}
+              timeZone={timeZone}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    </FocusProvider>
   );
 }
