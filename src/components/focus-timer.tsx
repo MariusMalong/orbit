@@ -2,9 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { logTimeEntry } from '@/app/actions/time-entry';
-import { buttonAccent, buttonPrimary } from '@/components/ui-classes';
 
-export function FocusTimer({ taskId }: { taskId: string }) {
+interface FocusTimerProps {
+  taskId: string;
+  taskTitle: string;
+}
+
+/**
+ * A round play button that starts timing work on a task. While running it
+ * becomes a "Stop 12:34" pill; stopping logs the time worked.
+ */
+export function FocusTimer({ taskId, taskTitle }: FocusTimerProps) {
   const [isActive, setIsActive] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
@@ -56,35 +64,45 @@ export function FocusTimer({ taskId }: { taskId: string }) {
     return `${m}:${s}`;
   };
 
+  if (!isActive && !isSaving) {
+    return (
+      <button
+        type="button"
+        onClick={handleToggle}
+        aria-label={`Start focus on ${taskTitle}`}
+        title="Start focus"
+        className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line bg-surface text-ink transition hover:border-accent hover:text-accent focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M7 4l13 8-13 8z" />
+        </svg>
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
       onClick={handleToggle}
       disabled={isSaving}
-      className={`grow ${isActive ? buttonAccent : buttonPrimary}`}
+      aria-label={isSaving ? 'Saving focus time' : `Stop focus on ${taskTitle}`}
+      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-accent px-3 text-sm font-semibold text-on-accent transition hover:bg-accent-hover focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none disabled:opacity-60"
     >
       {isSaving ? (
         'Saving…'
-      ) : isActive ? (
+      ) : (
         <>
           <span className="relative flex h-2 w-2" aria-hidden="true">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-on-accent opacity-50"></span>
             <span className="relative inline-flex h-2 w-2 rounded-full bg-on-accent"></span>
           </span>
           Stop <span className="tabular-nums">{formatTime(seconds)}</span>
-        </>
-      ) : (
-        <>
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            aria-hidden="true"
-          >
-            <path d="M7 4l13 8-13 8z" />
-          </svg>
-          Start focus
         </>
       )}
     </button>
