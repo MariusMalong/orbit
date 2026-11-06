@@ -17,6 +17,8 @@ interface TimelineProps {
   commitments: TimelineCommitment[];
   workDayStart: Date;
   workDayEnd: Date;
+  now: Date;
+  planStart: Date; // Where the engine started planning: now, or the start of the workday
   timeZone: string; // Visitor's timezone, for hour labels and times
   headerAction?: React.ReactNode;
 }
@@ -34,6 +36,8 @@ export function Timeline({
   commitments,
   workDayStart,
   workDayEnd,
+  now,
+  planStart,
   timeZone,
   headerAction,
 }: TimelineProps) {
@@ -66,6 +70,14 @@ export function Timeline({
   const offsetPx = (date: Date) =>
     ((date.getTime() - gridStart.getTime()) / MS_PER_MINUTE) * PX_PER_MINUTE;
 
+  const dayIsOver = planStart >= workDayEnd;
+  const showNowLine = now >= gridStart && now <= gridEnd;
+  // Hide an hour label the "Now" label would sit on top of.
+  const NOW_LABEL_CLEARANCE_PX = 14;
+  const isUnderNowLabel = (mark: Date) =>
+    showNowLine &&
+    Math.abs(offsetPx(mark) - offsetPx(now)) < NOW_LABEL_CLEARANCE_PX;
+
   // Only commitments that overlap today's grid are drawn, clipped to its edges.
   const visibleCommitments = commitments
     .filter((c) => c.end > gridStart && c.start < gridEnd)
@@ -86,7 +98,9 @@ export function Timeline({
             Today&apos;s plan
           </h2>
           <p className="mt-0.5 text-sm text-muted">
-            Built from your priorities, around fixed commitments
+            {planStart > workDayStart && !dayIsOver
+              ? `Planned from ${formatClock(planStart, timeZone)}, around fixed commitments`
+              : 'Built from your priorities, around fixed commitments'}
           </p>
         </div>
         {headerAction}
@@ -105,7 +119,9 @@ export function Timeline({
             didn&apos;t fit today
           </p>
           <p className="mt-1 text-sm">
-            Extend your hours or free up time to fit the rest in.
+            {dayIsOver
+              ? "Today's working hours are over. They'll be planned again tomorrow, or extend today's hours."
+              : 'Extend your hours or free up time to fit the rest in.'}
           </p>
           <ul className="mt-2 flex flex-col gap-0.5 text-sm">
             {bumpedTasks.map((task) => (
@@ -117,7 +133,7 @@ export function Timeline({
         </div>
       )}
 
-      {scheduledBlocks.length === 0 && (
+      {scheduledBlocks.length === 0 && bumpedTasks.length === 0 && (
         <p className="text-sm text-muted">
           Nothing scheduled yet. Add a task and Orbit will fit it into your day.
         </p>
@@ -135,7 +151,7 @@ export function Timeline({
             style={{ top: offsetPx(mark) }}
           >
             <span className="-mt-2 w-12 shrink-0 text-right text-xs text-muted tabular-nums">
-              {formatClock(mark, timeZone)}
+              {isUnderNowLabel(mark) ? '' : formatClock(mark, timeZone)}
             </span>
             <div className="flex-1 border-t border-line-soft" />
           </div>
@@ -191,6 +207,21 @@ export function Timeline({
             </div>
           );
         })}
+
+        {showNowLine && (
+          <div
+            className="pointer-events-none absolute inset-x-0 z-10 flex items-center gap-3"
+            style={{ top: offsetPx(now) }}
+            aria-hidden="true"
+          >
+            <span className="-mt-px w-12 shrink-0 text-right text-xs font-semibold text-ink tabular-nums">
+              Now
+            </span>
+            <div className="relative h-0.5 flex-1 bg-accent">
+              <span className="absolute -top-1 -left-1 h-2.5 w-2.5 rounded-full bg-accent" />
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
