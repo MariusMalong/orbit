@@ -8,6 +8,8 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    # A normal run takes about a minute and a half.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -28,6 +30,9 @@ jobs:
   # Runs the app against a real Postgres and drives it in a browser.
   e2e:
     runs-on: ubuntu-latest
+    # A normal run takes about two minutes. Without a limit, a hung step
+    # would block pull requests for GitHub's default of 6 hours.
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16
@@ -58,8 +63,12 @@ jobs:
       - run: npm ci
       - run: npx prisma migrate deploy
       - run: npm run build
+      # Installs Chromium's system packages with apt, which has hung on a
+      # slow mirror before. Fail fast instead, so the job can be rerun.
       - run: npx playwright install --with-deps chromium
+        timeout-minutes: 5
       - run: npm run test:e2e
+        timeout-minutes: 10
 
       - uses: actions/upload-artifact@v4
         if: failure()
