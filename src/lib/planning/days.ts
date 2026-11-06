@@ -6,7 +6,11 @@ import { getZonedParts, zonedWallTimeToDate } from '@/lib/time/zoned';
 // timezone. Kept apart from the engine so the engine never deals with
 // timezones, only instants.
 
-export type DayHours = { startTime: string; endTime: string }; // "HH:MM"
+export type DayHours = {
+  startTime: string; // "HH:MM"
+  endTime: string; // "HH:MM"
+  isDayOff?: boolean; // Nothing is planned; the hours are kept for when it's switched back on
+};
 
 /** Working hours by weekday (0 = Sunday). Missing days use DEFAULT_HOURS. */
 export type WeeklyHours = Partial<Record<number, DayHours>>;
@@ -17,7 +21,9 @@ export type PlanningDayInfo = PlanningDay & {
   date: Date; // Midnight at the start of the calendar day
   weekday: number; // 0 = Sunday
   workDayStart: Date; // Start of working hours, even if planning starts later
+  workDayEnd: Date; // End of working hours, even on a day off (where `end` is the start)
   hours: DayHours;
+  isDayOff: boolean;
 };
 
 const parseHHMM = (value: string) => value.split(':').map(Number);
@@ -25,6 +31,7 @@ const parseHHMM = (value: string) => value.split(':').map(Number);
 /**
  * `count` planning days starting today. Today's planning starts from now
  * (see planningStart); later days start at the beginning of their workday.
+ * A day off gets no planning time: its window ends where it starts.
  */
 export function buildPlanningDays(
   now: Date,
@@ -51,15 +58,19 @@ export function buildPlanningDays(
       );
 
     const workDayStart = at(startHour, startMinute);
-    const end = at(endHour, endMinute);
+    const workDayEnd = at(endHour, endMinute);
+    const isDayOff = hours.isDayOff ?? false;
+    const start = i === 0 ? planningStart(now, workDayStart) : workDayStart;
 
     return {
       date: at(0, 0),
       weekday,
       hours,
+      isDayOff,
       workDayStart,
-      start: i === 0 ? planningStart(now, workDayStart) : workDayStart,
-      end,
+      workDayEnd,
+      start,
+      end: isDayOff ? start : workDayEnd,
       urgentUntil: at(0, 0, 1),
     };
   });

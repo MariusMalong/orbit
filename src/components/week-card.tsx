@@ -38,8 +38,9 @@ export function WeekCard({
             weekday: 'short',
             timeZone,
           });
-          const description =
-            i === 0
+          const description = day.isDayOff
+            ? `${i === 0 ? 'Today' : formatShortDay(day.date, timeZone)}: day off`
+            : i === 0
               ? `Rest of today: ${load.percent}% full`
               : `${formatShortDay(day.date, timeZone)}: ${load.percent}% full, ${formatMinutes(load.busyMinutes)} busy`;
           return (
@@ -51,12 +52,14 @@ export function WeekCard({
               <span className="sr-only">{description}</span>
               <div
                 aria-hidden="true"
-                className="flex h-16 w-full items-end overflow-hidden rounded-md bg-subtle"
+                className={`flex h-16 w-full items-end overflow-hidden rounded-md ${day.isDayOff ? 'border border-dashed border-line' : 'bg-subtle'}`}
               >
-                <div
-                  className={`w-full bg-accent ${load.percent >= 100 ? '' : 'opacity-70'}`}
-                  style={{ height: `${load.percent}%` }}
-                />
+                {!day.isDayOff && (
+                  <div
+                    className={`w-full bg-accent ${load.percent >= 100 ? '' : 'opacity-70'}`}
+                    style={{ height: `${load.percent}%` }}
+                  />
+                )}
               </div>
               <span
                 aria-hidden="true"

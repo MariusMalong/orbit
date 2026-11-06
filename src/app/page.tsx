@@ -2,27 +2,16 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { Timeline } from '@/components/timeline';
-import { WorkdaySettings } from '@/components/workday-settings';
+import { WorkingHours } from '@/components/working-hours';
 import { ComingUp } from '@/components/coming-up';
 import { QuickAdd } from '@/components/quick-add';
 import { TaskList } from '@/components/task-list';
 import { WeekCard } from '@/components/week-card';
-import { Popover } from '@/components/popover';
 import { summarizeDay } from '@/lib/analytics/summarize';
 import { loadPlan } from '@/lib/planning/load-plan';
 import { formatDue, formatMinutes } from '@/lib/format';
 import { startOfNextZonedDay, startOfZonedDay } from '@/lib/time/zoned';
 import { toDateKey } from '@/lib/time/clock';
-
-const DAYS = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-];
 
 function ClockIcon() {
   return (
@@ -55,14 +44,14 @@ export default async function Home() {
     tasks: schedulableTasks,
     commitments,
     days,
+    week,
     plan,
     loads,
   } = await loadPlan(session.user.id);
 
   const todayPlan = days[0];
-  const currentDayOfWeek = todayPlan.weekday; // 0 - 6
   const workDayStart = todayPlan.workDayStart;
-  const workDayEnd = todayPlan.end;
+  const workDayEnd = todayPlan.workDayEnd; // The timeline shows the hours even on a day off
   const planStart = todayPlan.start;
 
   const startOfToday = startOfZonedDay(today, timeZone);
@@ -171,28 +160,28 @@ export default async function Home() {
             commitments={commitments}
             workDayStart={workDayStart}
             workDayEnd={workDayEnd}
+            isDayOff={todayPlan.isDayOff}
             now={today}
             planStart={planStart}
             timeZone={timeZone}
             headerAction={
-              <Popover
-                label={`Working hours for ${DAYS[currentDayOfWeek]}: ${todayPlan.hours.startTime} to ${todayPlan.hours.endTime}. Change`}
+              <WorkingHours
+                week={week}
+                label={
+                  todayPlan.isDayOff
+                    ? 'Today is a day off. Change working hours'
+                    : `Working hours today: ${todayPlan.hours.startTime} to ${todayPlan.hours.endTime}. Change working hours`
+                }
                 triggerClassName="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-sm text-ink tabular-nums transition hover:bg-subtle focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
                 trigger={
                   <>
                     <ClockIcon />
-                    {todayPlan.hours.startTime}–{todayPlan.hours.endTime}
+                    {todayPlan.isDayOff
+                      ? 'Day off'
+                      : `${todayPlan.hours.startTime}–${todayPlan.hours.endTime}`}
                   </>
                 }
-                panelClassName="right-0 w-max max-w-[calc(100vw-3rem)] p-3"
-              >
-                <WorkdaySettings
-                  dayOfWeek={currentDayOfWeek}
-                  dayName={DAYS[currentDayOfWeek]}
-                  currentStart={todayPlan.hours.startTime}
-                  currentEnd={todayPlan.hours.endTime}
-                />
-              </Popover>
+              />
             }
           />
           <ComingUp

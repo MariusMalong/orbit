@@ -124,6 +124,7 @@ model Availability {
   dayOfWeek Int      // 0 = Sun, 1 = Mon, etc.
   startTime String   // "HH:MM"
   endTime   String   // "HH:MM"
+  isDayOff  Boolean  @default(false) // Nothing is planned; the hours are kept for when it's switched back on
 }
 
 model Schedule {

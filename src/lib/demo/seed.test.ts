@@ -16,8 +16,12 @@ const fridayAt = (hhmm: string) => atZonedTime(friday, hhmm, timeZone);
 function scheduleDemo(now: Date) {
   const data = buildDemoData(now, timeZone);
   const active = data.tasks.filter((t) => t.status !== 'COMPLETED');
-  const workDayStart = atZonedTime(now, data.availability.startTime, timeZone);
-  const workDayEnd = atZonedTime(now, data.availability.endTime, timeZone);
+  const workDayStart = atZonedTime(
+    now,
+    data.availability[0].startTime,
+    timeZone
+  );
+  const workDayEnd = atZonedTime(now, data.availability[0].endTime, timeZone);
 
   const result = generateSchedule(
     active.map((t) => ({
@@ -62,7 +66,8 @@ describe.each(visits)('buildDemoData, visiting %s', (_, now) => {
   it("uses the visitor's day and an 8-hour workday", () => {
     const { availability, workDayStart, workDayEnd } = scheduleDemo(now);
 
-    expect(availability.dayOfWeek).toBe(5); // Friday in Melbourne
+    expect(availability[0].dayOfWeek).toBe(5); // Friday in Melbourne
+    expect(availability[0].isDayOff).toBe(false);
     expect(workDayEnd.getTime() - workDayStart.getTime()).toBe(8 * 3_600_000);
     expect(workDayStart < now && now < workDayEnd).toBe(true);
   });
@@ -106,9 +111,11 @@ describe.each(visits)('buildDemoData, visiting %s', (_, now) => {
 
   it('plans the week so the grant application is flagged late today', () => {
     const data = buildDemoData(now, timeZone);
-    const days = buildPlanningDays(now, timeZone, {
-      [data.availability.dayOfWeek]: data.availability,
-    });
+    const days = buildPlanningDays(
+      now,
+      timeZone,
+      Object.fromEntries(data.availability.map((a) => [a.dayOfWeek, a]))
+    );
     const open = data.tasks.filter((t) => t.status !== 'COMPLETED');
 
     const plan = generateMultiDaySchedule(
@@ -119,8 +126,11 @@ describe.each(visits)('buildDemoData, visiting %s', (_, now) => {
 
     expect(plan.lateTaskIds).toEqual(['Submit the grant application']);
     expect(plan.unscheduledTaskIds).toEqual([]);
-    // Everything that doesn't fit today shows up under "Coming up" tomorrow.
-    expect(plan.scheduledBlocks.some((b) => b.dayIndex === 1)).toBe(true);
+    // The weekend is off, so what doesn't fit today moves to Monday.
+    const usedDays = new Set(plan.scheduledBlocks.map((b) => b.dayIndex));
+    expect(usedDays.has(1)).toBe(false); // Saturday
+    expect(usedDays.has(2)).toBe(false); // Sunday
+    expect(usedDays.has(3)).toBe(true); // Monday
   });
 
   it('splits at least one task around a commitment', () => {
@@ -155,5 +165,17 @@ describe.each(visits)('buildDemoData, visiting %s', (_, now) => {
     for (const t of completed) {
       expect(t.completedAt).toEqual(now);
     }
+  });
+});
+
+describe('buildDemoData at the weekend', () => {
+  it('keeps the day the demo starts on as a workday', () => {
+    const saturday = new Date('2026-11-07T00:00:00Z'); // 11:00 in Melbourne
+    const { availability } = buildDemoData(saturday, timeZone);
+
+    expect(availability[0]).toMatchObject({ dayOfWeek: 6, isDayOff: false });
+    expect(availability.filter((a) => a.isDayOff)).toEqual([
+      { dayOfWeek: 0, startTime: '09:00', endTime: '17:00', isDayOff: true },
+    ]);
   });
 });

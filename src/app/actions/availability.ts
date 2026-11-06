@@ -3,40 +3,33 @@
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
+import { parseWeeklyHoursForm } from '@/lib/planning/weekly-hours';
 
-export async function setDayAvailability(formData: FormData) {
+/**
+ * Saves working hours and days off for the whole week at once. Returns an
+ * error message for the form to show, or null when it's saved.
+ */
+export async function saveWeeklyHours(
+  formData: FormData
+): Promise<string | null> {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
+  const userId = session.user.id;
 
-  const dayOfWeek = parseInt(formData.get('dayOfWeek') as string, 10); // 0 (Sun) - 6 (Sat)
-  const startTime = formData.get('startTime') as string; // e.g., "09:00"
-  const endTime = formData.get('endTime') as string; // e.g., "17:00"
+  const parsed = parseWeeklyHoursForm(formData);
+  if ('error' in parsed) return parsed.error;
 
-  // Upsert availability for this specific day of week
-  const existing = await prisma.availability.findFirst({
-    where: {
-      userId: session.user.id,
-      dayOfWeek,
-    },
-  });
-
-  if (existing) {
-    await prisma.availability.update({
-      where: { id: existing.id },
-      data: { startTime, endTime },
-    });
-  } else {
-    await prisma.availability.create({
-      data: {
-        userId: session.user.id,
-        dayOfWeek,
-        startTime,
-        endTime,
-      },
-    });
-  }
+  // Replace the user's seven rows in one transaction, so a failed save never
+  // leaves the week half updated.
+  await prisma.$transaction([
+    prisma.availability.deleteMany({ where: { userId } }),
+    prisma.availability.createMany({
+      data: parsed.rows.map((row) => ({ ...row, userId })),
+    }),
+  ]);
 
   revalidatePath('/', 'layout');
+  return null;
 }

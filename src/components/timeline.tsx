@@ -23,6 +23,7 @@ interface TimelineProps {
   commitments: TimelineCommitment[];
   workDayStart: Date;
   workDayEnd: Date;
+  isDayOff: boolean; // Nothing is planned; events still show
   now: Date;
   planStart: Date; // Where the engine started planning: now, or the start of the workday
   timeZone: string; // Visitor's timezone, for hour labels and times
@@ -43,6 +44,7 @@ export function Timeline({
   commitments,
   workDayStart,
   workDayEnd,
+  isDayOff,
   now,
   planStart,
   timeZone,
@@ -129,7 +131,7 @@ export function Timeline({
             Today&apos;s plan
           </h2>
           <p className="mt-0.5 text-sm text-muted">
-            {planStart > workDayStart && !dayIsOver
+            {planStart > workDayStart && !dayIsOver && !isDayOff
               ? `Planned from ${formatClock(planStart, timeZone)}. `
               : ''}
             Click an hour or a free slot to add an event, or a block to change
@@ -139,11 +141,19 @@ export function Timeline({
         <div className="shrink-0">{headerAction}</div>
       </div>
 
-      {scheduledBlocks.length === 0 && !dayIsOver && (
-        <p className="text-sm text-muted">
-          Nothing planned for the rest of today. Add a task above and Orbit will
-          fit it in.
+      {isDayOff ? (
+        <p className="rounded-lg bg-subtle px-4 py-3 text-sm text-ink-2">
+          Today is a day off, so no tasks are planned. Events still show here,
+          and you can add more.
         </p>
+      ) : (
+        scheduledBlocks.length === 0 &&
+        !dayIsOver && (
+          <p className="text-sm text-muted">
+            Nothing planned for the rest of today. Add a task above and Orbit
+            will fit it in.
+          </p>
+        )
       )}
 
       {/* Calendar grid */}

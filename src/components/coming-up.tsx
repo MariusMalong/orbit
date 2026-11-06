@@ -68,7 +68,9 @@ export function ComingUp({
     return {
       key: String(day.date.getTime()),
       label: i === 0 ? 'Tomorrow' : formatShortDay(day.date, timeZone),
-      hours: `${day.hours.startTime}–${day.hours.endTime}`,
+      hours: day.isDayOff
+        ? 'Day off'
+        : `${day.hours.startTime}–${day.hours.endTime}`,
       items,
     };
   });
