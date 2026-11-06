@@ -31,12 +31,12 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 ## What works today
 
 - Sign in with GitHub, or try a demo account with sample data.
-- Add, edit, complete and delete tasks. Each task has a title, a time estimate in minutes, a priority (low, medium or high) and an optional due date and time.
-- Add, edit and delete fixed commitments, such as appointments or lectures.
+- Add tasks and fixed commitments (events, such as appointments or lectures) from one quick-add bar at the top of the page. Each task has a title, a time estimate, a priority (low, medium or high) and an optional due date and time.
+- Click an upcoming hour or a free slot on the timeline to add an event there, and click any block to edit it, mark it as done or delete it.
 - Set your working hours separately for each day of the week.
-- See whatever doesn't fit today planned into the following days, under "Coming up".
+- See whatever doesn't fit today planned into the following days, next to your upcoming events, under "Coming up", and how full each day of the week is.
 - See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks, a line marking the current time, and warnings for anything that doesn't fit or won't make its deadline.
-- Use a focus timer on any task. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
+- Use a focus timer on any task from the task list. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
 - A summary of the day: time focused, tasks completed versus planned, and time still scheduled.
 - Light and dark themes. By default Orbit follows your device's setting; the switch in the header can fix it to light or dark, and the choice is remembered.
 

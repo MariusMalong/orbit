@@ -1,7 +1,14 @@
-import { ScheduleBlockResult, SchedulableTask } from '@/lib/engine/scheduler';
-import { formatClock, formatDue, formatShortDay } from '@/lib/format';
+import {
+  calculateFreeWindows,
+  ScheduleBlockResult,
+  SchedulableTask,
+} from '@/lib/engine/scheduler';
+import { formatClock, PRIORITY_LABELS } from '@/lib/format';
 import { getZonedParts } from '@/lib/time/zoned';
+import { addMinutesToClock, toDateKey } from '@/lib/time/clock';
 import { panel } from '@/components/ui-classes';
+import { EventMenu, MenuHeading, TaskMenu } from '@/components/item-menus';
+import { AddEventButton } from '@/components/quick-add';
 
 interface TimelineCommitment {
   id: string;
@@ -12,13 +19,6 @@ interface TimelineCommitment {
 
 interface TimelineProps {
   scheduledBlocks: ScheduleBlockResult[];
-  // Tasks with time left after today, and when they continue (null: not this week)
-  leftovers: {
-    task: SchedulableTask;
-    minutesLeft: number;
-    continuesOn: Date | null;
-  }[];
-  lateTaskIds: string[];
   tasks: SchedulableTask[];
   commitments: TimelineCommitment[];
   workDayStart: Date;
@@ -34,11 +34,11 @@ const HOUR_HEIGHT_PX = 64;
 const PX_PER_MINUTE = HOUR_HEIGHT_PX / 60;
 const MS_PER_MINUTE = 60_000;
 const MS_PER_HOUR = 3_600_000;
+// Free time shorter than this isn't offered as a slot for a new event.
+const MIN_FREE_SLOT_MINUTES = 15;
 
 export function Timeline({
   scheduledBlocks,
-  leftovers,
-  lateTaskIds,
   tasks,
   commitments,
   workDayStart,
@@ -50,10 +50,6 @@ export function Timeline({
 }: TimelineProps) {
   // Quick lookup map to resolve task titles and priorities by ID
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const allContinueThisWeek = leftovers.every((l) => l.continuesOn);
-  const lateTasks = lateTaskIds
-    .map((id) => taskMap.get(id))
-    .filter(Boolean) as SchedulableTask[];
 
   // The grid snaps outward to whole hours (in the visitor's timezone, which
   // may be offset by half an hour) so every hour line gets a label.
@@ -95,80 +91,58 @@ export function Timeline({
       drawEnd: c.end > gridEnd ? gridEnd : c.end,
     }));
 
+  // Free time from now on that nothing is planned in, offered for new events.
+  const slotsFrom = planStart > gridStart ? planStart : gridStart;
+  const freeSlots =
+    slotsFrom < gridEnd
+      ? calculateFreeWindows(slotsFrom, gridEnd, [
+          ...commitments,
+          ...scheduledBlocks.map((b) => ({
+            start: b.startTime,
+            end: b.endTime,
+          })),
+        ]).filter(
+          (w) =>
+            (w.end.getTime() - w.start.getTime()) / MS_PER_MINUTE >=
+            MIN_FREE_SLOT_MINUTES
+        )
+      : [];
+
+  // An hour-long event starting at `start`, in the visitor's timezone.
+  const draftAt = (start: Date) => {
+    const clock = formatClock(start, timeZone);
+    return {
+      date: toDateKey(start, timeZone),
+      start: clock,
+      end: addMinutesToClock(clock, 60),
+    };
+  };
+
   return (
     <section
       aria-labelledby="plan-heading"
       className={`${panel} flex flex-col gap-5 md:p-6`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <h2 id="plan-heading" className="font-display text-xl font-semibold">
             Today&apos;s plan
           </h2>
           <p className="mt-0.5 text-sm text-muted">
             {planStart > workDayStart && !dayIsOver
-              ? `Planned from ${formatClock(planStart, timeZone)}, around fixed commitments`
-              : 'Built from your priorities, around fixed commitments'}
+              ? `Planned from ${formatClock(planStart, timeZone)}. `
+              : ''}
+            Click an hour or a free slot to add an event, or a block to change
+            it.
           </p>
         </div>
-        {headerAction}
+        <div className="shrink-0">{headerAction}</div>
       </div>
 
-      {/* Deadline warning: tasks that won't be finished by their deadline */}
-      {lateTasks.length > 0 && (
-        <div
-          role="status"
-          className="rounded-lg border border-danger/40 bg-danger/5 p-4 text-danger"
-        >
-          <p className="text-sm font-semibold">
-            {lateTasks.length === 1 ? '1 task' : `${lateTasks.length} tasks`}{' '}
-            won&apos;t be done by the deadline
-          </p>
-          <ul className="mt-2 flex flex-col gap-0.5 text-sm">
-            {lateTasks.map((task) => (
-              <li key={task.id}>
-                {task.title}
-                {task.deadline &&
-                  ` · ${formatDue(task.deadline, now, timeZone).replace(/^Due/, 'due')}`}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Spillover warning: tasks the engine could not fit inside the workday */}
-      {leftovers.length > 0 && (
-        <div
-          role="status"
-          className="rounded-lg border border-warning-line bg-warning-bg p-4 text-warning-ink"
-        >
-          <p className="text-sm font-semibold">
-            {leftovers.length === 1 ? '1 task' : `${leftovers.length} tasks`}{' '}
-            didn&apos;t fit today
-          </p>
-          <p className="mt-1 text-sm">
-            {dayIsOver
-              ? "Today's working hours are over, so the rest is planned for the coming days."
-              : allContinueThisWeek
-                ? 'The rest is planned for the coming days, below.'
-                : "Some of it doesn't fit this week either. Extend your hours or free up time."}
-          </p>
-          <ul className="mt-2 flex flex-col gap-0.5 text-sm">
-            {leftovers.map(({ task, minutesLeft, continuesOn }) => (
-              <li key={task.id}>
-                {task.title} · {minutesLeft} min ·{' '}
-                {continuesOn
-                  ? `continues ${formatShortDay(continuesOn, timeZone)}`
-                  : "doesn't fit this week"}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {scheduledBlocks.length === 0 && leftovers.length === 0 && (
+      {scheduledBlocks.length === 0 && !dayIsOver && (
         <p className="text-sm text-muted">
-          Nothing scheduled yet. Add a task and Orbit will fit it into your day.
+          Nothing planned for the rest of today. Add a task above and Orbit will
+          fit it in.
         </p>
       )}
 
@@ -183,29 +157,82 @@ export function Timeline({
             className="absolute inset-x-0 flex gap-3"
             style={{ top: offsetPx(mark) }}
           >
-            <span className="-mt-2 w-12 shrink-0 text-right text-xs text-muted tabular-nums">
-              {isUnderNowLabel(mark) ? '' : formatClock(mark, timeZone)}
-            </span>
+            {isUnderNowLabel(mark) ? (
+              <span className="w-12 shrink-0" />
+            ) : mark > now && mark < gridEnd ? (
+              // Upcoming hours double as "add an event here" buttons.
+              <AddEventButton
+                draft={draftAt(mark)}
+                label={`Add an event at ${formatClock(mark, timeZone)}`}
+                className="group -mt-2.5 h-5 w-12 shrink-0 cursor-pointer rounded text-right text-xs text-muted tabular-nums hover:text-accent focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+              >
+                <span className="group-hover:hidden">
+                  {formatClock(mark, timeZone)}
+                </span>
+                <span className="hidden font-semibold group-hover:inline">
+                  + {formatClock(mark, timeZone)}
+                </span>
+              </AddEventButton>
+            ) : (
+              <span className="-mt-2 w-12 shrink-0 text-right text-xs text-muted tabular-nums">
+                {formatClock(mark, timeZone)}
+              </span>
+            )}
             <div className="flex-1 border-t border-line-soft" />
           </div>
         ))}
 
-        {visibleCommitments.map((c) => (
-          <div
-            key={c.id}
-            className="absolute right-1 left-16 overflow-hidden rounded-lg border border-dashed border-line bg-subtle px-4 py-2"
-            style={{
-              top: offsetPx(c.drawStart),
-              height: offsetPx(c.drawEnd) - offsetPx(c.drawStart),
-            }}
-          >
-            <p className="truncate text-sm font-medium text-ink-2">{c.title}</p>
-            <p className="text-xs text-muted">
-              {formatClock(c.start, timeZone)} – {formatClock(c.end, timeZone)}{' '}
-              · Fixed
-            </p>
-          </div>
-        ))}
+        {freeSlots.map((slot) => {
+          const top = offsetPx(slot.start) + 2;
+          const height = offsetPx(slot.end) - offsetPx(slot.start) - 4;
+          const clock = formatClock(slot.start, timeZone);
+          return (
+            <AddEventButton
+              key={slot.start.getTime()}
+              draft={draftAt(slot.start)}
+              label={`Add an event at ${clock}`}
+              className={`absolute right-1 left-16 flex cursor-pointer items-center rounded-lg border-[1.5px] border-dashed border-line px-4 text-left text-xs text-muted transition hover:border-accent hover:text-accent focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${height < 28 ? 'py-0' : 'py-2'}`}
+              style={{ top, height }}
+            >
+              + Add event at {clock}
+            </AddEventButton>
+          );
+        })}
+
+        {visibleCommitments.map((c) => {
+          const time = `${formatClock(c.start, timeZone)} – ${formatClock(c.end, timeZone)}`;
+          const height = offsetPx(c.drawEnd) - offsetPx(c.drawStart);
+          return (
+            <EventMenu
+              key={c.id}
+              commitment={{
+                id: c.id,
+                title: c.title,
+                startTime: c.start,
+                endTime: c.end,
+              }}
+              label={`${c.title}, ${time}. Edit or delete`}
+              heading={
+                <MenuHeading title={c.title} detail={`${time} · Fixed`} />
+              }
+              className="absolute right-1 left-16"
+              style={{ top: offsetPx(c.drawStart), height }}
+              triggerClassName={`block h-full w-full cursor-pointer overflow-hidden rounded-lg border border-dashed border-line bg-subtle px-4 text-left transition hover:border-muted focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${height < 44 ? 'py-1' : 'py-2'}`}
+              trigger={
+                <>
+                  <span className="block truncate text-sm font-medium text-ink-2">
+                    {c.title}
+                  </span>
+                  {height >= 44 && (
+                    <span className="block text-xs text-muted">
+                      {time} · Fixed
+                    </span>
+                  )}
+                </>
+              }
+            />
+          );
+        })}
 
         {scheduledBlocks.map((block, index) => {
           const task = taskMap.get(block.taskId);
@@ -219,25 +246,43 @@ export function Timeline({
           );
           const isCompact = height < 44;
 
+          const time = `${formatClock(block.startTime, timeZone)} – ${formatClock(block.endTime, timeZone)}`;
+          const priority = PRIORITY_LABELS[task.priority] ?? '';
+
           return (
-            <div
+            <TaskMenu
               key={`${block.taskId}-${index}`}
-              className={`absolute right-1 left-16 flex items-start justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 shadow-[inset_3px_0_0_var(--color-accent-edge)] ${isCompact ? 'py-1' : 'py-2.5'}`}
+              task={{ ...task, deadline: task.deadline ?? null }}
+              label={`${task.title}, ${time}. Edit, mark as done or delete`}
+              heading={
+                <MenuHeading
+                  title={task.title}
+                  detail={`${time} · ${minutes} min`}
+                />
+              }
+              className="absolute right-1 left-16"
               style={{ top, height }}
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{task.title}</p>
-                {!isCompact && (
-                  <p className="text-xs text-ink-2">
-                    {formatClock(block.startTime, timeZone)} –{' '}
-                    {formatClock(block.endTime, timeZone)} · {minutes} min
-                  </p>
-                )}
-              </div>
-              <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-medium">
-                P{task.priority}
-              </span>
-            </div>
+              triggerClassName={`flex h-full w-full cursor-pointer items-start justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 text-left shadow-[inset_3px_0_0_var(--color-accent-edge)] transition hover:brightness-[0.97] focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${isCompact ? 'py-1' : 'py-2.5'}`}
+              trigger={
+                <>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">
+                      {task.title}
+                    </span>
+                    {!isCompact && (
+                      <span className="block text-xs text-ink-2">
+                        {time} · {minutes} min
+                      </span>
+                    )}
+                  </span>
+                  {priority && !isCompact && (
+                    <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-medium">
+                      {priority}
+                    </span>
+                  )}
+                </>
+              }
+            />
           );
         })}
 

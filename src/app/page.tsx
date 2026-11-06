@@ -1,35 +1,22 @@
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { TaskForm } from '@/components/task-form';
-import { CommitmentForm } from '@/components/commitment-form';
 import { Timeline } from '@/components/timeline';
-import { EditTaskModal } from '@/components/edit-task-modal';
-import { EditCommitmentModal } from '@/components/edit-commitment-modal';
 import { WorkdaySettings } from '@/components/workday-settings';
 import { SchedulableTask, TimeWindow } from '@/lib/engine/scheduler';
 import { generateMultiDaySchedule } from '@/lib/engine/multi-day';
 import { buildPlanningDays, WeeklyHours } from '@/lib/planning/days';
+import { dayLoads } from '@/lib/planning/load';
 import { ComingUp } from '@/components/coming-up';
-import { deleteTask, completeTask } from '@/app/actions/task';
-import { deleteCommitment } from '@/app/actions/commitments';
-import { FocusTimer } from '@/components/focus-timer';
-import { StatsRow } from '@/components/stats-row';
+import { QuickAdd } from '@/components/quick-add';
+import { TaskList } from '@/components/task-list';
+import { WeekCard } from '@/components/week-card';
+import { Popover } from '@/components/popover';
 import { summarizeDay } from '@/lib/analytics/summarize';
-import {
-  formatClock,
-  formatDue,
-  formatShortDay,
-  PRIORITY_LABELS,
-} from '@/lib/format';
+import { formatDue, formatMinutes } from '@/lib/format';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
 import { startOfNextZonedDay, startOfZonedDay } from '@/lib/time/zoned';
-import {
-  buttonSecondary,
-  iconButtonDanger,
-  panel,
-  panelTitle,
-} from '@/components/ui-classes';
+import { toDateKey } from '@/lib/time/clock';
 
 const DAYS = [
   'Sunday',
@@ -41,18 +28,19 @@ const DAYS = [
   'Saturday',
 ];
 
-function TrashIcon() {
+function ClockIcon() {
   return (
     <svg
-      width="16"
-      height="16"
+      width="15"
+      height="15"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
       aria-hidden="true"
     >
-      <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
     </svg>
   );
 }
@@ -128,7 +116,6 @@ export default async function Home() {
   const scheduledBlocks = plan.scheduledBlocks.filter((b) => b.dayIndex === 0);
   const laterBlocks = plan.scheduledBlocks.filter((b) => b.dayIndex > 0);
   const lateTaskIds = plan.lateTaskIds;
-  const lateTasks = new Set(lateTaskIds);
 
   // Tasks with time left after today, and when they continue (if this week).
   const leftovers = schedulableTasks.flatMap((task) => {
@@ -172,6 +159,45 @@ export default async function Home() {
     scheduledBlocks,
   });
 
+  // How full each day is, for the "This week" chart.
+  const loads = dayLoads(
+    days,
+    plan.scheduledBlocks.map((b) => ({
+      start: b.startTime,
+      end: b.endTime,
+      dayIndex: b.dayIndex,
+    })),
+    timeWindows
+  );
+
+  // For tasks with nothing planned today: the day they're planned for, or
+  // null if they don't fit this week.
+  const nextPlanned = new Map<string, Date | null>();
+  for (const task of schedulableTasks) {
+    if (scheduledBlocks.some((b) => b.taskId === task.id)) continue;
+    nextPlanned.set(
+      task.id,
+      laterBlocks.find((b) => b.taskId === task.id)?.startTime ?? null
+    );
+  }
+
+  const lateTasks = schedulableTasks
+    .filter((t) => lateTaskIds.includes(t.id))
+    .map((t) => ({
+      id: t.id,
+      title: t.title,
+      due: t.deadline
+        ? formatDue(t.deadline, today, timeZone).replace(/^Due/, 'due')
+        : '',
+    }));
+
+  const commitments = rawCommitments.map((c) => ({
+    id: c.id,
+    title: c.title,
+    start: c.startTime,
+    end: c.endTime,
+  }));
+
   const todayLabel = today.toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
@@ -181,188 +207,87 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Page heading + daily analytics */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
-            {todayLabel}
-          </h1>
-          <p className="mt-1 text-muted">
-            {session.user.isDemo
-              ? "You're in a demo account filled with sample data. Change anything you like: it's deleted after 24 hours."
-              : `Welcome back, ${session.user.name}`}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+        <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
+          {todayLabel}
+        </h1>
+        <p className="text-muted tabular-nums">
+          {formatMinutes(summary.focusedMinutes)} focused ·{' '}
+          {summary.completedTasks} of {summary.plannedTasks} done ·{' '}
+          {formatMinutes(summary.scheduledMinutes)} planned
+        </p>
+        {session.user.isDemo && (
+          <p className="basis-full text-sm text-muted">
+            You&apos;re in a demo account filled with sample data. Change
+            anything you like: it&apos;s deleted after 24 hours.
           </p>
-        </div>
-        <StatsRow summary={summary} />
+        )}
       </div>
 
+      <QuickAdd today={toDateKey(today, timeZone)} />
+
       <div className="flex flex-wrap items-start gap-5">
-        {/* Main column: engine-generated timeline */}
         <div className="min-w-0 flex-[999_1_560px]">
           <Timeline
             scheduledBlocks={scheduledBlocks}
-            leftovers={leftovers}
-            lateTaskIds={lateTaskIds}
             tasks={schedulableTasks}
-            commitments={rawCommitments.map((c) => ({
-              id: c.id,
-              title: c.title,
-              start: c.startTime,
-              end: c.endTime,
-            }))}
+            commitments={commitments}
             workDayStart={workDayStart}
             workDayEnd={workDayEnd}
             now={today}
             planStart={planStart}
             timeZone={timeZone}
             headerAction={
-              <WorkdaySettings
-                dayOfWeek={currentDayOfWeek}
-                dayName={DAYS[currentDayOfWeek]}
-                currentStart={todayPlan.hours.startTime}
-                currentEnd={todayPlan.hours.endTime}
-              />
+              <Popover
+                label={`Working hours for ${DAYS[currentDayOfWeek]}: ${todayPlan.hours.startTime} to ${todayPlan.hours.endTime}. Change`}
+                triggerClassName="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-sm text-ink tabular-nums transition hover:bg-subtle focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+                trigger={
+                  <>
+                    <ClockIcon />
+                    {todayPlan.hours.startTime}–{todayPlan.hours.endTime}
+                  </>
+                }
+                panelClassName="right-0 w-max max-w-[calc(100vw-3rem)] p-3"
+              >
+                <WorkdaySettings
+                  dayOfWeek={currentDayOfWeek}
+                  dayName={DAYS[currentDayOfWeek]}
+                  currentStart={todayPlan.hours.startTime}
+                  currentEnd={todayPlan.hours.endTime}
+                />
+              </Popover>
             }
           />
           <ComingUp
             days={days.slice(1)}
             blocks={laterBlocks}
             tasks={schedulableTasks}
+            events={commitments.filter((c) => c.start >= startOfTomorrow)}
             lateTaskIds={lateTaskIds}
             timeZone={timeZone}
           />
         </div>
 
-        {/* Sidebar: tasks and commitments */}
         <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-5">
-          <section aria-labelledby="active-tasks-heading" className={panel}>
-            <h2 id="active-tasks-heading" className={`${panelTitle} mb-3`}>
-              Active tasks
-            </h2>
-            {rawTasks.length === 0 ? (
-              <p className="text-sm text-muted">
-                No active tasks. Add one below and it will appear on your plan.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-3">
-                {rawTasks.map((task) => {
-                  const isInProgress = task.status === 'IN_PROGRESS';
-                  return (
-                    <li
-                      key={task.id}
-                      className="flex flex-col gap-3 rounded-lg border border-line-soft p-3.5"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold">{task.title}</p>
-                          <p className="text-sm text-muted">
-                            {task.durationEstimate} min
-                            {isInProgress ? ' left' : ''} ·{' '}
-                            {PRIORITY_LABELS[task.priority] ?? task.priority}{' '}
-                            priority
-                          </p>
-                          {task.deadline && (
-                            <p
-                              className={`text-sm ${lateTasks.has(task.id) ? 'font-medium text-danger' : 'text-muted'}`}
-                            >
-                              {formatDue(task.deadline, today, timeZone)}
-                              {lateTasks.has(task.id) &&
-                                " · won't be done in time"}
-                            </p>
-                          )}
-                        </div>
-                        {isInProgress && (
-                          <span className="shrink-0 rounded-full bg-subtle px-2 py-0.5 text-xs text-ink-2">
-                            In progress
-                          </span>
-                        )}
-                      </div>
-                      {/* Focus gets its own full-width row; the rest share the row below */}
-                      <div className="flex flex-col gap-1.5">
-                        <FocusTimer taskId={task.id} />
-                        <div className="grid grid-cols-[1fr_1fr_auto] gap-1.5">
-                          <EditTaskModal task={task} />
-                          <form action={completeTask}>
-                            <input
-                              type="hidden"
-                              name="taskId"
-                              value={task.id}
-                            />
-                            <button
-                              type="submit"
-                              className={`${buttonSecondary} w-full`}
-                            >
-                              Done
-                            </button>
-                          </form>
-                          <form action={deleteTask}>
-                            <input
-                              type="hidden"
-                              name="taskId"
-                              value={task.id}
-                            />
-                            <button
-                              type="submit"
-                              aria-label={`Delete ${task.title}`}
-                              className={iconButtonDanger}
-                            >
-                              <TrashIcon />
-                            </button>
-                          </form>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-
-          <TaskForm />
-
-          <section aria-labelledby="commitments-heading" className={panel}>
-            <h2 id="commitments-heading" className={panelTitle}>
-              Fixed commitments
-            </h2>
-            <p className="mt-1 mb-4 text-sm text-muted">
-              Appointments and events the scheduler plans around.
-            </p>
-
-            {rawCommitments.length > 0 && (
-              <ul className="mb-4 flex flex-col gap-2">
-                {rawCommitments.map((c) => (
-                  <li
-                    key={c.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line-soft p-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{c.title}</p>
-                      <p className="text-sm text-muted">
-                        {formatShortDay(c.startTime, timeZone)} ·{' '}
-                        {formatClock(c.startTime, timeZone)} –{' '}
-                        {formatClock(c.endTime, timeZone)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <EditCommitmentModal commitment={c} />
-                      <form action={deleteCommitment}>
-                        <input type="hidden" name="commitmentId" value={c.id} />
-                        <button
-                          type="submit"
-                          aria-label={`Remove ${c.title}`}
-                          className={iconButtonDanger}
-                        >
-                          <TrashIcon />
-                        </button>
-                      </form>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <CommitmentForm />
-          </section>
+          <TaskList
+            tasks={rawTasks}
+            lateTaskIds={new Set(lateTaskIds)}
+            nextPlanned={nextPlanned}
+            tomorrow={startOfTomorrow}
+            now={today}
+            timeZone={timeZone}
+          />
+          <WeekCard
+            days={days}
+            loads={loads}
+            lateTasks={lateTasks}
+            leftovers={leftovers.map((l) => ({
+              id: l.task.id,
+              title: l.task.title,
+              continuesOn: l.continuesOn,
+            }))}
+            timeZone={timeZone}
+          />
         </div>
       </div>
     </div>
