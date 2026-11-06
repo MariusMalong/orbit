@@ -26,7 +26,9 @@ test('a demo account opens on a planned day', async ({ page }) => {
   ).toBeVisible();
   // The demo's team check-in repeats every week.
   await expect(
-    page.getByRole('button', { name: /^Team check-in, .*every week/ })
+    page.getByRole('button', {
+      name: /^Team check-in\b.*· Weekly\s*\.\s*Edit or delete$/,
+    })
   ).toBeVisible();
 });
 

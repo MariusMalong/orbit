@@ -207,8 +207,8 @@ export default async function Home() {
                   week={week}
                   label={
                     todayPlan.isDayOff
-                      ? 'Today is a day off. Change working hours'
-                      : `Working hours today: ${todayPlan.hours.startTime} to ${todayPlan.hours.endTime}. Change working hours`
+                      ? 'Day off today. Change working hours'
+                      : `${todayPlan.hours.startTime}–${todayPlan.hours.endTime} working hours today. Change working hours`
                   }
                   triggerClassName="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-sm text-ink tabular-nums transition hover:bg-subtle focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
                   trigger={

@@ -168,7 +168,7 @@ export function Timeline({
               // Upcoming hours double as "add an event here" buttons.
               <AddEventButton
                 draft={draftAt(mark)}
-                label={`Add an event at ${formatClock(mark, timeZone)}`}
+                label={`Add event at ${formatClock(mark, timeZone)}`}
                 className="group -mt-2.5 h-5 w-12 shrink-0 cursor-pointer rounded text-right text-xs text-muted tabular-nums hover:text-accent focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
               >
                 <span className="group-hover:hidden">
@@ -195,7 +195,6 @@ export function Timeline({
             <AddEventButton
               key={slot.start.getTime()}
               draft={draftAt(slot.start)}
-              label={`Add an event at ${clock}`}
               className={`absolute right-1 left-16 flex cursor-pointer items-center rounded-lg border-[1.5px] border-dashed border-line px-4 text-left text-xs text-muted transition hover:border-accent hover:text-accent focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${height < 28 ? 'py-0' : 'py-2'}`}
               style={{ top, height }}
             >
@@ -217,7 +216,6 @@ export function Timeline({
                 endTime: c.end,
                 repeatsWeekly: c.repeatsWeekly,
               }}
-              label={`${c.title}, ${time}${c.repeatsWeekly ? ', every week' : ''}. Edit or delete`}
               heading={
                 <MenuHeading
                   title={c.title}
@@ -233,11 +231,17 @@ export function Timeline({
                     {c.title}
                     {c.repeatsWeekly && <RepeatIcon />}
                   </span>
-                  {height >= 44 && (
+                  {height >= 44 ? (
                     <span className="block text-xs text-muted">
                       {time} · {c.repeatsWeekly ? 'Weekly' : 'Fixed'}
                     </span>
+                  ) : (
+                    // Too short to show the time, so screen readers still get it.
+                    <span className="sr-only">
+                      , {time} · {c.repeatsWeekly ? 'Weekly' : 'Fixed'}
+                    </span>
                   )}
+                  <span className="sr-only">. Edit or delete</span>
                 </>
               }
             />
@@ -263,7 +267,6 @@ export function Timeline({
             <TaskMenu
               key={`${block.taskId}-${index}`}
               task={{ ...task, deadline: task.deadline ?? null }}
-              label={`${task.title}, ${time}. Edit, mark as done or delete`}
               heading={
                 <MenuHeading
                   title={task.title}
@@ -279,7 +282,11 @@ export function Timeline({
                     <span className="block truncate text-sm font-semibold">
                       {task.title}
                     </span>
-                    {!isCompact && (
+                    {isCompact ? (
+                      <span className="sr-only">
+                        , {time} · {minutes} min
+                      </span>
+                    ) : (
                       <span className="block text-xs text-ink-2">
                         {time} · {minutes} min
                       </span>
@@ -290,6 +297,9 @@ export function Timeline({
                       {priority}
                     </span>
                   )}
+                  <span className="sr-only">
+                    . Edit, mark as done or delete
+                  </span>
                 </>
               }
             />
