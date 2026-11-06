@@ -63,9 +63,10 @@ jobs:
       - run: npm ci
       - run: npx prisma migrate deploy
       - run: npm run build
-      # Installs Chromium's system packages with apt, which has hung on a
-      # slow mirror before. Fail fast instead, so the job can be rerun.
-      - run: npx playwright install --with-deps chromium
+      # Just the browser. GitHub's Ubuntu runners already have the system
+      # libraries Chromium needs (they ship Google Chrome), and installing
+      # them with --with-deps goes through apt, which kept hanging.
+      - run: npx playwright install chromium
         timeout-minutes: 5
       - run: npm run test:e2e
         timeout-minutes: 10
