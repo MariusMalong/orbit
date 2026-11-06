@@ -27,11 +27,14 @@ model User {
   availabilities Availability[]
   // Temporary accounts created by "Try the demo", deleted after 24 hours
   isDemo         Boolean           @default(false)
+  // For rate-limiting "Try the demo": a keyed hash of the visitor's IP, never the IP itself
+  demoIpHash     String?
   // When the user finished (or skipped) the welcome setup. Null sends them to /welcome.
   onboardedAt    DateTime?
   createdAt      DateTime          @default(now())
 
   @@index([isDemo, createdAt])
+  @@index([demoIpHash, createdAt])
 }
 
 model Account {
