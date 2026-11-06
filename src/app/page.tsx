@@ -264,25 +264,39 @@ export default async function Home() {
                           </span>
                         )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-1.5">
+                      {/* Focus gets its own full-width row; the rest share the row below */}
+                      <div className="flex flex-col gap-1.5">
                         <FocusTimer taskId={task.id} />
-                        <EditTaskModal task={task} />
-                        <form action={completeTask}>
-                          <input type="hidden" name="taskId" value={task.id} />
-                          <button type="submit" className={buttonSecondary}>
-                            Done
-                          </button>
-                        </form>
-                        <form action={deleteTask}>
-                          <input type="hidden" name="taskId" value={task.id} />
-                          <button
-                            type="submit"
-                            aria-label={`Delete ${task.title}`}
-                            className={iconButtonDanger}
-                          >
-                            <TrashIcon />
-                          </button>
-                        </form>
+                        <div className="grid grid-cols-[1fr_1fr_auto] gap-1.5">
+                          <EditTaskModal task={task} />
+                          <form action={completeTask}>
+                            <input
+                              type="hidden"
+                              name="taskId"
+                              value={task.id}
+                            />
+                            <button
+                              type="submit"
+                              className={`${buttonSecondary} w-full`}
+                            >
+                              Done
+                            </button>
+                          </form>
+                          <form action={deleteTask}>
+                            <input
+                              type="hidden"
+                              name="taskId"
+                              value={task.id}
+                            />
+                            <button
+                              type="submit"
+                              aria-label={`Delete ${task.title}`}
+                              className={iconButtonDanger}
+                            >
+                              <TrashIcon />
+                            </button>
+                          </form>
+                        </div>
                       </div>
                     </li>
                   );

@@ -8,7 +8,7 @@ Orbit is a daily planner that builds your schedule for you. You give it tasks (w
 
 Click **Try the demo** to get your own temporary account, filled with a day of sample tasks and commitments. There's no sign-up, and the account is deleted after 24 hours. Try starting a focus timer, moving a commitment or changing your hours, and watch the plan redraw. You can also sign in with GitHub (Orbit only reads your public profile and email address).
 
-![Orbit dashboard showing today's plan on an hour grid](docs/images/dashboard.png)
+![Orbit's dashboard in a demo account: the rest of today planned from the current time, a task due today moved ahead of higher-priority work, and two tasks that didn't fit](docs/images/dashboard.png)
 
 I'm building it to learn how to design a scheduling algorithm properly and to practise full-stack patterns in a real multi-user app. It's a work in progress.
 
