@@ -6,6 +6,7 @@ import { WorkingHours } from '@/components/working-hours';
 import { ComingUp } from '@/components/coming-up';
 import { QuickAdd } from '@/components/quick-add';
 import { FocusProvider } from '@/components/focus-context';
+import { NowCard, type NowItem } from '@/components/now-card';
 import { TaskList } from '@/components/task-list';
 import { WeekCard } from '@/components/week-card';
 import { summarizeDay } from '@/lib/analytics/summarize';
@@ -125,6 +126,26 @@ export default async function Home() {
         : '',
     }));
 
+  // The rest of today for the phone's Now card: planned work and events that
+  // haven't ended yet, in time order.
+  const taskById = new Map(schedulableTasks.map((t) => [t.id, t]));
+  const nowItems: NowItem[] = [
+    ...scheduledBlocks.flatMap((b): NowItem[] => {
+      const task = taskById.get(b.taskId);
+      return task
+        ? [{ kind: 'task', start: b.startTime, end: b.endTime, task }]
+        : [];
+    }),
+    ...commitments
+      .filter((c) => c.end > today && c.start < startOfTomorrow)
+      .map((c): NowItem => ({
+        kind: 'event',
+        start: c.start,
+        end: c.end,
+        title: c.title,
+      })),
+  ].sort((a, b) => a.start.getTime() - b.start.getTime());
+
   const todayLabel = today.toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
@@ -150,6 +171,17 @@ export default async function Home() {
               anything you like: it&apos;s deleted after 24 hours.
             </p>
           )}
+        </div>
+
+        {/* On phones, what to do now comes first; the timeline is further down. */}
+        <div className="md:hidden">
+          <NowCard
+            items={nowItems}
+            lateTaskIds={new Set(lateTaskIds)}
+            isDayOff={todayPlan.isDayOff}
+            now={today}
+            timeZone={timeZone}
+          />
         </div>
 
         <QuickAdd today={toDateKey(today, timeZone)} />
