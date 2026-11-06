@@ -131,3 +131,21 @@ export function moveSeries(
     ),
   };
 }
+
+/**
+ * The skipped weeks after adding `start`. Skips more than a day in the past
+ * are dropped: events are only expanded from today on, so they can never
+ * matter again, and the list would otherwise grow for as long as the event
+ * exists.
+ */
+export function addSkippedStart(
+  skippedStarts: Date[],
+  start: Date,
+  now: Date
+): Date[] {
+  const keepFrom = now.getTime() - MS_PER_DAY;
+  const kept = skippedStarts.filter(
+    (d) => d.getTime() >= keepFrom && d.getTime() !== start.getTime()
+  );
+  return [...kept, start].sort((a, b) => a.getTime() - b.getTime());
+}
