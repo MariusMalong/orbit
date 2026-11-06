@@ -1,4 +1,11 @@
 import { defineConfig, devices } from '@playwright/test';
+import { existsSync } from 'node:fs';
+
+// Tests that set up users directly (see e2e/db.ts) need DATABASE_URL. CI sets
+// it; locally it comes from .env, like it does for the app.
+if (!process.env.DATABASE_URL && existsSync('.env')) {
+  process.loadEnvFile('.env');
+}
 
 // End-to-end tests: real browser, real server, real database.
 //
