@@ -18,7 +18,7 @@ The core is a single pure function, `generateSchedule` in [`src/lib/engine/sched
 
 For each day it:
 
-1. Starts from your working hours (for example 09:00–17:00).
+1. Starts from your working hours (for example 09:00–17:00). Once the day has started, it plans from the current time instead, rounded up to the next 5 minutes, because time that has passed can't be planned.
 2. Cuts out your fixed commitments, leaving a list of free windows.
 3. Sorts tasks by priority, highest first.
 4. Walks through the free windows, placing each task in the earliest space available. A task that doesn't fit in one window is split across the next ones.
@@ -32,7 +32,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Add, edit, complete and delete tasks. Each task has a title, a time estimate in minutes and a priority (low, medium or high).
 - Add, edit and delete fixed commitments, such as appointments or lectures.
 - Set your working hours separately for each day of the week.
-- See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks and a warning for anything that doesn't fit.
+- See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks, a line marking the current time, and a warning for anything that doesn't fit.
 - Use a focus timer on any task. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
 - A summary of the day: time focused, tasks completed versus planned, and time still scheduled.
 
@@ -47,14 +47,12 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ## Known limitations
 
-- The plan always starts at the beginning of the working day, even if it's already the afternoon.
-- "Completed today" uses a task's `updatedAt` timestamp, because there's no dedicated `completedAt` column yet.
+- The engine fills every gap, so a task can end up with a block of only a few minutes squeezed in before a commitment.
 - Starting a demo isn't rate-limited, so the only cap on demo accounts is the 24-hour cleanup.
 
 ## Next steps
 
-- Start the plan from the current time instead of the start of the day.
-- A `completedAt` column on tasks.
+- A minimum block length, so tasks aren't split into slivers of a few minutes.
 - Projects for grouping tasks, and saved schedules. The `Project`, `Schedule` and `ScheduleBlock` models are already in the schema but aren't used yet.
 
 ## Tech stack
@@ -71,7 +69,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 The live site runs on Vercel and deploys every push to `main`. The build runs `prisma migrate deploy` before `next build`, so schema changes go out with the code that needs them. The database is a Neon Postgres instance in Sydney. The app connects through Neon's connection pooler, and migrations use the direct connection (`DIRECT_URL`).
 
-Pull requests get their own Vercel preview URL, and CI runs the checks below on each one.
+Pull requests get their own Vercel preview URL, and `main` is protected: a pull request can only be merged once CI passes.
 
 ## Project layout
 
