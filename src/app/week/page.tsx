@@ -4,6 +4,8 @@ import { auth } from '@/auth';
 import { raiseTaskPriority } from '@/app/actions/task';
 import { QuickAdd } from '@/components/quick-add';
 import { WeekBoard } from '@/components/week-board';
+import { WorkingHours } from '@/components/working-hours';
+import { buttonSecondary } from '@/components/ui-classes';
 import { formatDayRange, formatDue } from '@/lib/format';
 import { loadPlan } from '@/lib/planning/load-plan';
 import type { SchedulableTask } from '@/lib/engine/scheduler';
@@ -20,7 +22,7 @@ export default async function WeekPage() {
     redirect('/signin');
   }
 
-  const { timeZone, now, tasks, commitments, days, plan, loads } =
+  const { timeZone, now, tasks, commitments, days, week, plan, loads } =
     await loadPlan(session.user.id);
 
   const lastDay = days[days.length - 1];
@@ -50,14 +52,22 @@ export default async function WeekPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
-          {formatDayRange(days[0].date, lastDay.date, timeZone)}
-        </h1>
-        <p className="mt-1 text-muted">
-          Whatever doesn&apos;t fit one day moves to the next. Click anything to
-          change it.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
+            {formatDayRange(days[0].date, lastDay.date, timeZone)}
+          </h1>
+          <p className="mt-1 text-muted">
+            Whatever doesn&apos;t fit one day moves to the next working day.
+            Click anything to change it.
+          </p>
+        </div>
+        <WorkingHours
+          week={week}
+          label="Change working hours and days off"
+          triggerClassName={`${buttonSecondary} cursor-pointer`}
+          trigger="Working hours"
+        />
       </div>
 
       {lateTasks.map((task) => (

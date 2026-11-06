@@ -6,6 +6,7 @@ interface DialogProps {
   open: boolean;
   onClose: () => void;
   labelledBy: string;
+  wide?: boolean; // For forms with rows of inputs, like the working-hours editor
   children: React.ReactNode;
 }
 
@@ -14,7 +15,13 @@ interface DialogProps {
  * focus trapping and Escape, and sits above everything else on the page.
  * Clicking the backdrop closes it too.
  */
-export function Dialog({ open, onClose, labelledBy, children }: DialogProps) {
+export function Dialog({
+  open,
+  onClose,
+  labelledBy,
+  wide = false,
+  children,
+}: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -34,7 +41,7 @@ export function Dialog({ open, onClose, labelledBy, children }: DialogProps) {
       onClick={(event) => {
         if (event.target === ref.current) onClose();
       }}
-      className="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-line bg-surface p-0 text-ink shadow-xl backdrop:bg-scrim"
+      className={`m-auto w-[calc(100%-2rem)] ${wide ? 'max-w-xl' : 'max-w-md'} rounded-xl border border-line bg-surface p-0 text-ink shadow-xl backdrop:bg-scrim`}
     >
       {open && <div className="p-6">{children}</div>}
     </dialog>

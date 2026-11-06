@@ -84,18 +84,27 @@ export function WeekBoard({
         return (
           <li
             key={day.date.getTime()}
-            aria-label={`${formatShortDay(day.date, timeZone)}: ${load.percent}% full`}
-            className={`flex min-w-0 flex-col gap-1.5 rounded-xl border bg-surface p-2.5 lg:min-h-[28rem] ${i === 0 ? 'border-accent' : 'border-line'}`}
+            aria-label={`${formatShortDay(day.date, timeZone)}: ${day.isDayOff ? 'day off' : `${load.percent}% full`}`}
+            className={`flex min-w-0 flex-col gap-1.5 rounded-xl border p-2.5 lg:min-h-[28rem] ${
+              day.isDayOff
+                ? 'border-dashed border-line bg-transparent'
+                : `bg-surface ${i === 0 ? 'border-accent' : 'border-line'}`
+            }`}
           >
             <div className="border-b border-line-soft px-0.5 pb-2">
               <p className="font-display text-[15px] font-semibold">{label}</p>
               <p className="text-xs text-muted tabular-nums">
-                {i === 0 && day.start > day.workDayStart
-                  ? `From ${formatClock(day.start, timeZone)} to ${day.hours.endTime}`
-                  : `${day.hours.startTime}–${day.hours.endTime}`}
+                {day.isDayOff
+                  ? 'Day off'
+                  : i === 0 &&
+                      day.start > day.workDayStart &&
+                      day.start < day.end
+                    ? `From ${formatClock(day.start, timeZone)} to ${day.hours.endTime}`
+                    : `${day.hours.startTime}–${day.hours.endTime}`}
               </p>
               <div
-                className="mt-2 h-1 overflow-hidden rounded-full bg-subtle"
+                aria-hidden={day.isDayOff}
+                className={`mt-2 h-1 overflow-hidden rounded-full ${day.isDayOff ? 'invisible' : 'bg-subtle'}`}
                 title={`${load.percent}% full, ${formatMinutes(load.busyMinutes)} busy`}
               >
                 <div
@@ -107,9 +116,11 @@ export function WeekBoard({
 
             {items.length === 0 ? (
               <p className="px-0.5 pt-1 text-xs text-muted">
-                {i === 0 && day.start >= day.end
-                  ? 'Working hours are over'
-                  : 'Free'}
+                {day.isDayOff
+                  ? 'Nothing planned'
+                  : i === 0 && day.start >= day.end
+                    ? 'Working hours are over'
+                    : 'Free'}
               </p>
             ) : (
               <ul className="flex flex-col gap-1.5">
