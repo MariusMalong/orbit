@@ -13,7 +13,8 @@
     "format:check": "prettier --check .",
     "postinstall": "prisma generate",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.3",
@@ -24,6 +25,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.0",
     "@tailwindcss/turbopack": "^4",
     "@types/node": "^24.19.2",
     "@types/react": "^19",
