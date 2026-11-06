@@ -144,6 +144,9 @@ npm run typecheck     # TypeScript
 npm run lint          # ESLint
 npm run format:check  # Prettier (npm run format to fix)
 npm test              # Vitest
+npm run test:e2e      # Playwright (needs the database running)
 ```
 
-GitHub Actions runs all of these, plus a production build, on every push to `main` and every pull request.
+The end-to-end tests in `e2e/` drive the real app in Chromium against a real database. Each test starts its own demo account and covers a flow people actually use: adding and finishing tasks, the focus timer, weekly events (adding, moving every week, deleting one week), working hours and days off, the theme switch, and the phone's Now card. The browser's timezone is chosen so it's always mid-morning there, so the demo has a full day planned whenever the tests run. The first time, install the browser with `npx playwright install chromium`.
+
+GitHub Actions runs all of these on every push to `main` and every pull request: the checks and a production build in one job, and the end-to-end tests against a Postgres service in another.
