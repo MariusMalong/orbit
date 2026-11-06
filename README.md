@@ -37,6 +37,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - See whatever doesn't fit today planned into the following days, next to your upcoming events, under "Coming up", and how full each day of the week is.
 - See the next 7 days side by side on the Week page, with how full each day is. When a task won't meet its deadline, one click raises its priority so it's planned sooner.
 - See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks, a line marking the current time, and warnings for anything that doesn't fit or won't make its deadline.
+- On a phone, see what to do now at the top of the page, with a large Start focus button and the next few things after it.
 - Use a focus timer on any task from the task list. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
 - A summary of the day: time focused, tasks completed versus planned, and time still scheduled.
 - Light and dark themes. By default Orbit follows your device's setting; the switch in the header can fix it to light or dark, and the choice is remembered.
