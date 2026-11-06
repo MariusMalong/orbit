@@ -1,5 +1,5 @@
 import { ScheduleBlockResult, SchedulableTask } from '@/lib/engine/scheduler';
-import { formatClock, formatDue } from '@/lib/format';
+import { formatClock, formatDue, formatShortDay } from '@/lib/format';
 import { getZonedParts } from '@/lib/time/zoned';
 import { panel } from '@/components/ui-classes';
 
@@ -12,7 +12,12 @@ interface TimelineCommitment {
 
 interface TimelineProps {
   scheduledBlocks: ScheduleBlockResult[];
-  bumpedTaskIds: string[];
+  // Tasks with time left after today, and when they continue (null: not this week)
+  leftovers: {
+    task: SchedulableTask;
+    minutesLeft: number;
+    continuesOn: Date | null;
+  }[];
   lateTaskIds: string[];
   tasks: SchedulableTask[];
   commitments: TimelineCommitment[];
@@ -32,7 +37,7 @@ const MS_PER_HOUR = 3_600_000;
 
 export function Timeline({
   scheduledBlocks,
-  bumpedTaskIds,
+  leftovers,
   lateTaskIds,
   tasks,
   commitments,
@@ -45,9 +50,7 @@ export function Timeline({
 }: TimelineProps) {
   // Quick lookup map to resolve task titles and priorities by ID
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const bumpedTasks = bumpedTaskIds
-    .map((id) => taskMap.get(id))
-    .filter(Boolean) as SchedulableTask[];
+  const allContinueThisWeek = leftovers.every((l) => l.continuesOn);
   const lateTasks = lateTaskIds
     .map((id) => taskMap.get(id))
     .filter(Boolean) as SchedulableTask[];
@@ -126,7 +129,7 @@ export function Timeline({
               <li key={task.id}>
                 {task.title}
                 {task.deadline &&
-                  ` · ${formatDue(task.deadline, now, timeZone).toLowerCase()}`}
+                  ` · ${formatDue(task.deadline, now, timeZone).replace(/^Due/, 'due')}`}
               </li>
             ))}
           </ul>
@@ -134,33 +137,36 @@ export function Timeline({
       )}
 
       {/* Spillover warning: tasks the engine could not fit inside the workday */}
-      {bumpedTasks.length > 0 && (
+      {leftovers.length > 0 && (
         <div
           role="status"
           className="rounded-lg border border-warning-line bg-warning-bg p-4 text-warning-ink"
         >
           <p className="text-sm font-semibold">
-            {bumpedTasks.length === 1
-              ? '1 task'
-              : `${bumpedTasks.length} tasks`}{' '}
+            {leftovers.length === 1 ? '1 task' : `${leftovers.length} tasks`}{' '}
             didn&apos;t fit today
           </p>
           <p className="mt-1 text-sm">
             {dayIsOver
-              ? "Today's working hours are over. They'll be planned again tomorrow, or extend today's hours."
-              : 'Extend your hours or free up time to fit the rest in.'}
+              ? "Today's working hours are over, so the rest is planned for the coming days."
+              : allContinueThisWeek
+                ? 'The rest is planned for the coming days, below.'
+                : "Some of it doesn't fit this week either. Extend your hours or free up time."}
           </p>
           <ul className="mt-2 flex flex-col gap-0.5 text-sm">
-            {bumpedTasks.map((task) => (
+            {leftovers.map(({ task, minutesLeft, continuesOn }) => (
               <li key={task.id}>
-                {task.title} · {task.durationEstimate} min
+                {task.title} · {minutesLeft} min ·{' '}
+                {continuesOn
+                  ? `continues ${formatShortDay(continuesOn, timeZone)}`
+                  : "doesn't fit this week"}
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {scheduledBlocks.length === 0 && bumpedTasks.length === 0 && (
+      {scheduledBlocks.length === 0 && leftovers.length === 0 && (
         <p className="text-sm text-muted">
           Nothing scheduled yet. Add a task and Orbit will fit it into your day.
         </p>

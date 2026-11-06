@@ -7,12 +7,10 @@ import { Timeline } from '@/components/timeline';
 import { EditTaskModal } from '@/components/edit-task-modal';
 import { EditCommitmentModal } from '@/components/edit-commitment-modal';
 import { WorkdaySettings } from '@/components/workday-settings';
-import {
-  generateSchedule,
-  planningStart,
-  SchedulableTask,
-  TimeWindow,
-} from '@/lib/engine/scheduler';
+import { SchedulableTask, TimeWindow } from '@/lib/engine/scheduler';
+import { generateMultiDaySchedule } from '@/lib/engine/multi-day';
+import { buildPlanningDays, WeeklyHours } from '@/lib/planning/days';
+import { ComingUp } from '@/components/coming-up';
 import { deleteTask, completeTask } from '@/app/actions/task';
 import { deleteCommitment } from '@/app/actions/commitments';
 import { FocusTimer } from '@/components/focus-timer';
@@ -25,12 +23,7 @@ import {
   PRIORITY_LABELS,
 } from '@/lib/format';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
-import {
-  atZonedTime,
-  getZonedParts,
-  startOfNextZonedDay,
-  startOfZonedDay,
-} from '@/lib/time/zoned';
+import { startOfNextZonedDay, startOfZonedDay } from '@/lib/time/zoned';
 import {
   buttonSecondary,
   iconButtonDanger,
@@ -75,7 +68,6 @@ export default async function Home() {
   // server's (Vercel runs in UTC).
   const timeZone = await getUserTimeZone();
   const today = new Date();
-  const currentDayOfWeek = getZonedParts(today, timeZone).weekday; // 0 - 6
 
   // 1. Fetch data from database
   // IN_PROGRESS tasks (partially worked via the Focus Timer) still have remaining
@@ -93,20 +85,22 @@ export default async function Home() {
     orderBy: { startTime: 'asc' },
   });
 
-  // Fetch Workday Availability for today (or fallback to 09:00 - 17:00)
-  const availability = await prisma.availability.findFirst({
-    where: {
-      userId: session.user.id,
-      dayOfWeek: currentDayOfWeek,
-    },
+  // Working hours for each day of the week (missing days use 09:00 - 17:00),
+  // turned into the next 7 planning days in the visitor's timezone.
+  const availability = await prisma.availability.findMany({
+    where: { userId: session.user.id },
   });
-
-  const startTimeStr = availability?.startTime || '09:00';
-  const endTimeStr = availability?.endTime || '17:00';
-
-  // Turn the "HH:MM" availability strings into today's instants
-  const workDayStart = atZonedTime(today, startTimeStr, timeZone);
-  const workDayEnd = atZonedTime(today, endTimeStr, timeZone);
+  const weeklyHours: WeeklyHours = Object.fromEntries(
+    availability.map((a) => [
+      a.dayOfWeek,
+      { startTime: a.startTime, endTime: a.endTime },
+    ])
+  );
+  const days = buildPlanningDays(today, timeZone, weeklyHours);
+  const todayPlan = days[0];
+  const currentDayOfWeek = todayPlan.weekday; // 0 - 6
+  const workDayStart = todayPlan.workDayStart;
+  const workDayEnd = todayPlan.end;
 
   // 2. Map Prisma data to Engine types
   const schedulableTasks: SchedulableTask[] = rawTasks.map((t) => ({
@@ -125,18 +119,30 @@ export default async function Home() {
   const startOfToday = startOfZonedDay(today, timeZone);
   const startOfTomorrow = startOfNextZonedDay(today, timeZone);
 
-  // 3. Run the Scheduling Engine, from now (or the start of the workday if
-  // it hasn't begun): time that has already passed can't be planned. Tasks
-  // due before midnight are urgent and go first.
-  const planStart = planningStart(today, workDayStart);
-  const { scheduledBlocks, bumpedTaskIds, lateTaskIds } = generateSchedule(
-    schedulableTasks,
-    timeWindows,
-    planStart,
-    workDayEnd,
-    { urgentUntil: startOfTomorrow }
-  );
+  // 3. Run the Scheduling Engine over the next 7 days. Today is planned from
+  // now (time that has passed can't be planned); whatever doesn't fit rolls
+  // into the following days, and deadlines are checked against when each
+  // task will actually finish.
+  const planStart = todayPlan.start;
+  const plan = generateMultiDaySchedule(schedulableTasks, timeWindows, days);
+  const scheduledBlocks = plan.scheduledBlocks.filter((b) => b.dayIndex === 0);
+  const laterBlocks = plan.scheduledBlocks.filter((b) => b.dayIndex > 0);
+  const lateTaskIds = plan.lateTaskIds;
   const lateTasks = new Set(lateTaskIds);
+
+  // Tasks with time left after today, and when they continue (if this week).
+  const leftovers = schedulableTasks.flatMap((task) => {
+    const minutesToday = scheduledBlocks
+      .filter((b) => b.taskId === task.id)
+      .reduce(
+        (sum, b) => sum + (b.endTime.getTime() - b.startTime.getTime()) / 60000,
+        0
+      );
+    const minutesLeft = Math.round(task.durationEstimate - minutesToday);
+    if (minutesLeft <= 0) return [];
+    const next = laterBlocks.find((b) => b.taskId === task.id);
+    return [{ task, minutesLeft, continuesOn: next?.startTime ?? null }];
+  });
 
   // 4. Analytics: aggregate today's executed time and task completion
 
@@ -195,7 +201,7 @@ export default async function Home() {
         <div className="min-w-0 flex-[999_1_560px]">
           <Timeline
             scheduledBlocks={scheduledBlocks}
-            bumpedTaskIds={bumpedTaskIds}
+            leftovers={leftovers}
             lateTaskIds={lateTaskIds}
             tasks={schedulableTasks}
             commitments={rawCommitments.map((c) => ({
@@ -213,10 +219,17 @@ export default async function Home() {
               <WorkdaySettings
                 dayOfWeek={currentDayOfWeek}
                 dayName={DAYS[currentDayOfWeek]}
-                currentStart={startTimeStr}
-                currentEnd={endTimeStr}
+                currentStart={todayPlan.hours.startTime}
+                currentEnd={todayPlan.hours.endTime}
               />
             }
+          />
+          <ComingUp
+            days={days.slice(1)}
+            blocks={laterBlocks}
+            tasks={schedulableTasks}
+            lateTaskIds={lateTaskIds}
+            timeZone={timeZone}
           />
         </div>
 

@@ -11,7 +11,8 @@ import { getZonedParts, zonedWallTimeToDate } from '@/lib/time/zoned';
 // placed relative to that start. Every visitor sees the same shape of day: a
 // commitment coming up soon, tasks split around commitments, and one or two
 // low-priority tasks that don't fit, and a task with a deadline that jumps the
-// queue (see seed.test.ts, which checks this
+// queue, and one that won't make its deadline in two days' time (see
+// seed.test.ts, which checks this
 // against the real scheduler).
 
 export type DemoTimeEntry = {
@@ -145,6 +146,19 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       durationEstimate: 45,
       status: 'TODO',
       deadline: null,
+      completedAt: null,
+      timeEntries: [],
+    },
+    {
+      // Too big to finish before its deadline the day after tomorrow, so the
+      // multi-day planner flags it as late today. (At most 45 minutes are free
+      // for it today and 8 hours tomorrow, so at least 75 minutes remain on
+      // the due day: it can't finish before 10:15.)
+      title: 'Submit the grant application',
+      priority: 1,
+      durationEstimate: 600,
+      status: 'TODO',
+      deadline: zonedWallTimeToDate(year, month, day + 2, 10, 0, timeZone),
       completedAt: null,
       timeEntries: [],
     },
