@@ -1,26 +1,119 @@
 @import 'tailwindcss';
 
 /*
- * Studio design tokens.
- * Each --color-* entry becomes a Tailwind utility (bg-canvas, text-ink, border-line, ...),
- * so components reference the palette by role instead of by raw hex value.
+ * Tide design tokens: misty teal in light mode, neutral graphite in dark mode.
+ *
+ * Components use the role utilities (bg-canvas, text-ink, border-line, ...),
+ * which read these variables, so switching theme only swaps the values below.
+ * Light is the default. Dark applies when the visitor picks it, or when they
+ * leave the theme on "System" and their device is in dark mode. The chosen
+ * theme comes from a cookie and is set as data-theme on <html> (layout.tsx).
  */
-@theme {
-  --color-canvas: #ecedef; /* page background */
-  --color-surface: #ffffff; /* panels, inputs */
-  --color-subtle: #f4f5f7; /* secondary buttons, chips */
-  --color-line: #d8dadf; /* panel and input borders */
-  --color-line-soft: #e6e7ea; /* dividers, timeline hour lines */
-  --color-ink: #16181d; /* primary text, primary buttons */
-  --color-ink-2: #3a3e47; /* secondary text on tinted surfaces */
-  --color-muted: #555a64; /* labels, helper text (7:1 on white) */
-  --color-accent: #f08a4b; /* timeline blocks, active timer */
-  --color-accent-hover: #e67a37;
-  --color-accent-tint: #fbdcc8; /* opaque so grid lines don't show through blocks */
-  --color-danger: #a12a1a;
-  --color-warning-bg: #fff4e5;
-  --color-warning-line: #f3c99a;
-  --color-warning-ink: #7a3e00;
+:root {
+  color-scheme: light;
+  --canvas: #eef3f3; /* page background */
+  --surface: #fafcfc; /* panels, inputs */
+  --subtle: #e7eeee; /* chips, hover, fixed events */
+  --line: #d3dfdf; /* panel and input borders */
+  --line-soft: #e2eaea; /* dividers, timeline hour lines */
+  --ink: #162426; /* primary text */
+  --ink-2: #2e3e40; /* secondary text on tinted surfaces */
+  --muted: #536466; /* labels, helper text */
+  --primary: #162426; /* primary buttons (Start focus, Save) */
+  --primary-hover: #2e3e40;
+  --on-primary: #ffffff;
+  --accent: #2c7c7b; /* add buttons, now line, logo dot */
+  --accent-hover: #246868;
+  --on-accent: #ffffff; /* text on bg-accent */
+  --accent-tint: #d4eae8; /* task blocks; opaque so grid lines don't show through */
+  --accent-edge: transparent; /* stripe on task blocks, only needed in dark mode */
+  --scrim: rgb(22 36 38 / 0.4); /* behind dialogs */
+  --danger: #a3372a;
+  --warning-bg: #fff4e5;
+  --warning-line: #f3c99a;
+  --warning-ink: #7a3e00;
+}
+
+/*
+ * Graphite: colour stays on things you act on; everything else is neutral grey.
+ * The same values appear twice: once for a visitor who picked dark, and once
+ * for "System" on a device in dark mode. Keep the two blocks in sync.
+ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: #141516;
+  --surface: #1c1d1f;
+  --subtle: #232528;
+  --line: #2f3135;
+  --line-soft: #26282b;
+  --ink: #e6e7e9;
+  --ink-2: #c4c7cc;
+  --muted: #a0a3a9;
+  --primary: #34373c; /* raised grey: a light button would glare in the dark */
+  --primary-hover: #3e4147;
+  --on-primary: #f1f2f4;
+  --accent: #6cc5bf;
+  --accent-hover: #86d4cf;
+  --on-accent: #0b1c1b;
+  --accent-tint: #2a2e31;
+  --accent-edge: #6cc5bf;
+  --scrim: rgb(0 0 0 / 0.6);
+  --danger: #f0a196;
+  --warning-bg: #2c2417;
+  --warning-line: #5a4522;
+  --warning-ink: #f2c98a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --canvas: #141516;
+    --surface: #1c1d1f;
+    --subtle: #232528;
+    --line: #2f3135;
+    --line-soft: #26282b;
+    --ink: #e6e7e9;
+    --ink-2: #c4c7cc;
+    --muted: #a0a3a9;
+    --primary: #34373c; /* raised grey: a light button would glare in the dark */
+    --primary-hover: #3e4147;
+    --on-primary: #f1f2f4;
+    --accent: #6cc5bf;
+    --accent-hover: #86d4cf;
+    --on-accent: #0b1c1b;
+    --accent-tint: #2a2e31;
+    --accent-edge: #6cc5bf;
+    --scrim: rgb(0 0 0 / 0.6);
+    --danger: #f0a196;
+    --warning-bg: #2c2417;
+    --warning-line: #5a4522;
+    --warning-ink: #f2c98a;
+  }
+}
+
+/* Each --color-* entry becomes a Tailwind utility (bg-canvas, text-ink, ...). */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-edge: var(--accent-edge);
+  --color-scrim: var(--scrim);
+  --color-danger: var(--danger);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-line: var(--warning-line);
+  --color-warning-ink: var(--warning-ink);
 }
 
 /* Font families come from next/font CSS variables set on <html> in layout.tsx. */

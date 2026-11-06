@@ -68,7 +68,7 @@ export function ComingUp({
                 return (
                   <li
                     key={`${block.taskId}-${block.startTime.getTime()}`}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-lg bg-accent-tint px-3 py-2 text-sm"
+                    className="flex flex-wrap items-center gap-x-3 gap-y-0.5 rounded-lg bg-accent-tint px-3 py-2 text-sm shadow-[inset_3px_0_0_var(--color-accent-edge)]"
                   >
                     {/* On phones the time gets its own line so the title has room */}
                     <span className="w-full text-xs text-ink-2 tabular-nums sm:w-24 sm:shrink-0 sm:text-sm">

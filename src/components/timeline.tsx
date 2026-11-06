@@ -222,7 +222,7 @@ export function Timeline({
           return (
             <div
               key={`${block.taskId}-${index}`}
-              className={`absolute right-1 left-16 flex items-start justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 ${isCompact ? 'py-1' : 'py-2.5'}`}
+              className={`absolute right-1 left-16 flex items-start justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 shadow-[inset_3px_0_0_var(--color-accent-edge)] ${isCompact ? 'py-1' : 'py-2.5'}`}
               style={{ top, height }}
             >
               <div className="min-w-0">
