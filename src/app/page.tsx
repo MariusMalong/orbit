@@ -9,6 +9,7 @@ import { EditCommitmentModal } from '@/components/edit-commitment-modal';
 import { WorkdaySettings } from '@/components/workday-settings';
 import {
   generateSchedule,
+  planningStart,
   SchedulableTask,
   TimeWindow,
 } from '@/lib/engine/scheduler';
@@ -115,11 +116,13 @@ export default async function Home() {
     end: c.endTime,
   }));
 
-  // 3. Run the Scheduling Engine
+  // 3. Run the Scheduling Engine, from now (or the start of the workday if
+  // it hasn't begun): time that has already passed can't be planned.
+  const planStart = planningStart(today, workDayStart);
   const { scheduledBlocks, bumpedTaskIds } = generateSchedule(
     schedulableTasks,
     timeWindows,
-    workDayStart,
+    planStart,
     workDayEnd
   );
 
@@ -137,13 +140,11 @@ export default async function Home() {
       },
       select: { duration: true },
     }),
-    // No completedAt column exists; updatedAt is set by the COMPLETED
-    // transition, so it is used as the completion timestamp.
     prisma.task.count({
       where: {
         userId: session.user.id,
         status: 'COMPLETED',
-        updatedAt: { gte: startOfToday, lt: startOfTomorrow },
+        completedAt: { gte: startOfToday, lt: startOfTomorrow },
       },
     }),
   ]);
@@ -194,6 +195,8 @@ export default async function Home() {
             }))}
             workDayStart={workDayStart}
             workDayEnd={workDayEnd}
+            now={today}
+            planStart={planStart}
             timeZone={timeZone}
             headerAction={
               <WorkdaySettings

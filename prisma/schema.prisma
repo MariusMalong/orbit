@@ -90,12 +90,15 @@ model Task {
   durationEstimate Int             // In minutes
   deadline         DateTime?
   status           TaskStatus      @default(TODO)
+  completedAt      DateTime?       // When the task was marked done
   
   scheduleBlocks   ScheduleBlock[]
   timeEntries      TimeEntry[]
 
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
+
+  @@index([userId, completedAt])
 }
 
 enum TaskStatus {

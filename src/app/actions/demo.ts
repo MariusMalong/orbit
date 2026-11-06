@@ -31,7 +31,10 @@ export async function startDemo() {
     },
   });
 
-  const { tasks, commitments } = buildDemoData(now, await getUserTimeZone());
+  const { availability, tasks, commitments } = buildDemoData(
+    now,
+    await getUserTimeZone()
+  );
   const sessionToken = randomBytes(32).toString('hex');
   const expires = new Date(now.getTime() + DEMO_LIFETIME_MS);
 
@@ -40,6 +43,7 @@ export async function startDemo() {
       name: 'Demo visitor',
       email: `demo-${randomUUID()}@demo.invalid`,
       isDemo: true,
+      availabilities: { create: availability },
       commitments: { create: commitments },
       tasks: {
         create: tasks.map(({ timeEntries, ...task }) => ({
