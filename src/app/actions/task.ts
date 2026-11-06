@@ -41,7 +41,7 @@ export async function createTask(formData: FormData) {
   });
 
   // 4. Tell Next.js to refresh the dashboard so the new task appears
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function deleteTask(formData: FormData) {
@@ -63,7 +63,7 @@ export async function deleteTask(formData: FormData) {
   });
 
   // 4. Refresh the dashboard
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function completeTask(formData: FormData) {
@@ -89,7 +89,7 @@ export async function completeTask(formData: FormData) {
   });
 
   // 4. Refresh the dashboard
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function updateTask(formData: FormData) {
@@ -120,5 +120,26 @@ export async function updateTask(formData: FormData) {
     },
   });
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
+}
+
+// The quick fix offered when a task won't meet its deadline: raising its
+// priority makes the planner fit it in sooner.
+export async function raiseTaskPriority(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const taskId = formData.get('taskId') as string;
+
+  await prisma.task.updateMany({
+    where: {
+      id: taskId,
+      userId: session.user.id, // Strict data isolation
+    },
+    data: { priority: 3 },
+  });
+
+  revalidatePath('/', 'layout');
 }

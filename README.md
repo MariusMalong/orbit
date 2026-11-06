@@ -35,6 +35,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Click an upcoming hour or a free slot on the timeline to add an event there, and click any block to edit it, mark it as done or delete it.
 - Set your working hours separately for each day of the week.
 - See whatever doesn't fit today planned into the following days, next to your upcoming events, under "Coming up", and how full each day of the week is.
+- See the next 7 days side by side on the Week page, with how full each day is. When a task won't meet its deadline, one click raises its priority so it's planned sooner.
 - See today's plan on an hour-by-hour timeline, with commitments shown alongside the scheduled tasks, a line marking the current time, and warnings for anything that doesn't fit or won't make its deadline.
 - Use a focus timer on any task from the task list. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
 - A summary of the day: time focused, tasks completed versus planned, and time still scheduled.
@@ -84,9 +85,11 @@ Pull requests get their own Vercel preview URL, and `main` is protected: a pull 
 ```
 prisma/schema.prisma        Database schema
 prisma/migrations/          SQL migrations, applied on deploy
-src/app/page.tsx            Dashboard: loads data, runs the engine, renders the page
+src/app/page.tsx            Today: the timeline, task list and week overview
+src/app/week/page.tsx       Week: the next 7 days side by side
 src/app/actions/            Server Actions for tasks, commitments, availability and time entries
-src/lib/engine/scheduler.ts The scheduling engine
+src/lib/engine/             The scheduling engine (one day, and 7 days)
+src/lib/planning/           Loads a user's data and plans their week; working hours, day load
 src/lib/analytics/          Daily summary calculations
 src/lib/demo/               Sample data for demo accounts
 src/components/             UI components

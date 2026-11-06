@@ -38,5 +38,5 @@ export async function setDayAvailability(formData: FormData) {
     });
   }
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }

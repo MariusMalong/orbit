@@ -42,7 +42,7 @@ export async function addCommitment(formData: FormData) {
     },
   });
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function deleteCommitment(formData: FormData) {
@@ -60,7 +60,7 @@ export async function deleteCommitment(formData: FormData) {
     },
   });
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function updateCommitment(formData: FormData) {
@@ -85,5 +85,5 @@ export async function updateCommitment(formData: FormData) {
     },
   });
 
-  revalidatePath('/');
+  revalidatePath('/', 'layout');
 }

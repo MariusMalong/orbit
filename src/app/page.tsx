@@ -3,18 +3,14 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { Timeline } from '@/components/timeline';
 import { WorkdaySettings } from '@/components/workday-settings';
-import { SchedulableTask, TimeWindow } from '@/lib/engine/scheduler';
-import { generateMultiDaySchedule } from '@/lib/engine/multi-day';
-import { buildPlanningDays, WeeklyHours } from '@/lib/planning/days';
-import { dayLoads } from '@/lib/planning/load';
 import { ComingUp } from '@/components/coming-up';
 import { QuickAdd } from '@/components/quick-add';
 import { TaskList } from '@/components/task-list';
 import { WeekCard } from '@/components/week-card';
 import { Popover } from '@/components/popover';
 import { summarizeDay } from '@/lib/analytics/summarize';
+import { loadPlan } from '@/lib/planning/load-plan';
 import { formatDue, formatMinutes } from '@/lib/format';
-import { getUserTimeZone } from '@/lib/time/user-timezone';
 import { startOfNextZonedDay, startOfZonedDay } from '@/lib/time/zoned';
 import { toDateKey } from '@/lib/time/clock';
 
@@ -48,71 +44,30 @@ function ClockIcon() {
 export default async function Home() {
   const session = await auth();
 
-  if (!session?.user) {
+  if (!session?.user?.id) {
     redirect('/signin');
   }
 
-  // "Today" and the workday hours are in the visitor's timezone, not the
-  // server's (Vercel runs in UTC).
-  const timeZone = await getUserTimeZone();
-  const today = new Date();
+  const {
+    timeZone,
+    now: today,
+    rawTasks,
+    tasks: schedulableTasks,
+    commitments,
+    days,
+    plan,
+    loads,
+  } = await loadPlan(session.user.id);
 
-  // 1. Fetch data from database
-  // IN_PROGRESS tasks (partially worked via the Focus Timer) still have remaining
-  // time, so they must stay in the engine's input alongside untouched TODO tasks.
-  const rawTasks = await prisma.task.findMany({
-    where: {
-      userId: session.user.id,
-      status: { in: ['TODO', 'IN_PROGRESS'] },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  const rawCommitments = await prisma.fixedCommitment.findMany({
-    where: { userId: session.user.id },
-    orderBy: { startTime: 'asc' },
-  });
-
-  // Working hours for each day of the week (missing days use 09:00 - 17:00),
-  // turned into the next 7 planning days in the visitor's timezone.
-  const availability = await prisma.availability.findMany({
-    where: { userId: session.user.id },
-  });
-  const weeklyHours: WeeklyHours = Object.fromEntries(
-    availability.map((a) => [
-      a.dayOfWeek,
-      { startTime: a.startTime, endTime: a.endTime },
-    ])
-  );
-  const days = buildPlanningDays(today, timeZone, weeklyHours);
   const todayPlan = days[0];
   const currentDayOfWeek = todayPlan.weekday; // 0 - 6
   const workDayStart = todayPlan.workDayStart;
   const workDayEnd = todayPlan.end;
-
-  // 2. Map Prisma data to Engine types
-  const schedulableTasks: SchedulableTask[] = rawTasks.map((t) => ({
-    id: t.id,
-    title: t.title,
-    durationEstimate: t.durationEstimate,
-    priority: t.priority,
-    deadline: t.deadline,
-  }));
-
-  const timeWindows: TimeWindow[] = rawCommitments.map((c) => ({
-    start: c.startTime,
-    end: c.endTime,
-  }));
+  const planStart = todayPlan.start;
 
   const startOfToday = startOfZonedDay(today, timeZone);
   const startOfTomorrow = startOfNextZonedDay(today, timeZone);
 
-  // 3. Run the Scheduling Engine over the next 7 days. Today is planned from
-  // now (time that has passed can't be planned); whatever doesn't fit rolls
-  // into the following days, and deadlines are checked against when each
-  // task will actually finish.
-  const planStart = todayPlan.start;
-  const plan = generateMultiDaySchedule(schedulableTasks, timeWindows, days);
   const scheduledBlocks = plan.scheduledBlocks.filter((b) => b.dayIndex === 0);
   const laterBlocks = plan.scheduledBlocks.filter((b) => b.dayIndex > 0);
   const lateTaskIds = plan.lateTaskIds;
@@ -159,17 +114,6 @@ export default async function Home() {
     scheduledBlocks,
   });
 
-  // How full each day is, for the "This week" chart.
-  const loads = dayLoads(
-    days,
-    plan.scheduledBlocks.map((b) => ({
-      start: b.startTime,
-      end: b.endTime,
-      dayIndex: b.dayIndex,
-    })),
-    timeWindows
-  );
-
   // For tasks with nothing planned today: the day they're planned for, or
   // null if they don't fit this week.
   const nextPlanned = new Map<string, Date | null>();
@@ -190,13 +134,6 @@ export default async function Home() {
         ? formatDue(t.deadline, today, timeZone).replace(/^Due/, 'due')
         : '',
     }));
-
-  const commitments = rawCommitments.map((c) => ({
-    id: c.id,
-    title: c.title,
-    start: c.startTime,
-    end: c.endTime,
-  }));
 
   const todayLabel = today.toLocaleDateString('en-GB', {
     weekday: 'long',
