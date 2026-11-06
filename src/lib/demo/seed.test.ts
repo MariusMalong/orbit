@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildDemoData, demoWorkdayStart } from './seed';
 import { generateSchedule, planningStart } from '../engine/scheduler';
+import { generateMultiDaySchedule } from '../engine/multi-day';
+import { buildPlanningDays } from '../planning/days';
 import { atZonedTime, startOfNextZonedDay } from '../time/zoned';
 
 // A Melbourne visitor on Friday 6 November, while the server (UTC) is still on
@@ -100,6 +102,25 @@ describe.each(visits)('buildDemoData, visiting %s', (_, now) => {
 
     expect(result.scheduledBlocks[0].taskId).toBe('Reply to supplier emails');
     expect(result.lateTaskIds).toEqual([]);
+  });
+
+  it('plans the week so the grant application is flagged late today', () => {
+    const data = buildDemoData(now, timeZone);
+    const days = buildPlanningDays(now, timeZone, {
+      [data.availability.dayOfWeek]: data.availability,
+    });
+    const open = data.tasks.filter((t) => t.status !== 'COMPLETED');
+
+    const plan = generateMultiDaySchedule(
+      open.map((t) => ({ ...t, id: t.title })),
+      data.commitments.map((c) => ({ start: c.startTime, end: c.endTime })),
+      days
+    );
+
+    expect(plan.lateTaskIds).toEqual(['Submit the grant application']);
+    expect(plan.unscheduledTaskIds).toEqual([]);
+    // Everything that doesn't fit today shows up under "Coming up" tomorrow.
+    expect(plan.scheduledBlocks.some((b) => b.dayIndex === 1)).toBe(true);
   });
 
   it('splits at least one task around a commitment', () => {
