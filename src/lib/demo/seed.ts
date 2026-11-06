@@ -35,6 +35,7 @@ export type DemoCommitment = {
   title: string;
   startTime: Date;
   endTime: Date;
+  repeatsWeekly?: boolean;
 };
 
 export type DemoAvailability = {
@@ -100,7 +101,13 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
 
   const commitments: DemoCommitment[] = [
     // Starts 30–60 minutes after now, so the first block is a useful length.
-    { title: 'Team check-in', startTime: at(90), endTime: at(120) },
+    // Weekly, so the demo shows a repeating event.
+    {
+      title: 'Team check-in',
+      startTime: at(90),
+      endTime: at(120),
+      repeatsWeekly: true,
+    },
     { title: 'Coffee with Sam', startTime: at(210), endTime: at(270) },
     { title: 'Dentist appointment', startTime: at(390), endTime: at(450) },
   ];

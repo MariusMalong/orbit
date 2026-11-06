@@ -4,27 +4,22 @@ import type { PlanningDayInfo } from '@/lib/planning/days';
 import type { DayLoad } from '@/lib/planning/load';
 import { formatClock, formatMinutes, formatShortDay } from '@/lib/format';
 import { EventMenu, MenuHeading, TaskMenu } from '@/components/item-menus';
-
-interface WeekEvent {
-  id: string;
-  title: string;
-  start: Date;
-  end: Date;
-}
+import type { EventOccurrence } from '@/lib/planning/recurrence';
+import { RepeatIcon } from '@/components/repeat-icon';
 
 interface WeekBoardProps {
   days: PlanningDayInfo[]; // Today first
   loads: DayLoad[]; // One per day, same order
   blocks: DayBlock[]; // Planned work on every day
   tasks: SchedulableTask[];
-  events: WeekEvent[];
+  events: EventOccurrence[];
   lateTaskIds: string[];
   timeZone: string;
 }
 
 type Item =
   | { kind: 'task'; start: Date; end: Date; task: SchedulableTask }
-  | { kind: 'event'; start: Date; end: Date; event: WeekEvent };
+  | { kind: 'event'; start: Date; end: Date; event: EventOccurrence };
 
 const itemClass =
   'block w-full cursor-pointer rounded-lg px-2.5 py-1.5 text-left transition ' +
@@ -130,19 +125,20 @@ export function WeekBoard({
                   if (item.kind === 'event') {
                     const { event } = item;
                     return (
-                      <li key={`event-${event.id}`}>
+                      <li key={`event-${event.key}`}>
                         <EventMenu
                           commitment={{
                             id: event.id,
                             title: event.title,
                             startTime: event.start,
                             endTime: event.end,
+                            repeatsWeekly: event.repeatsWeekly,
                           }}
-                          label={`${event.title}, ${time}. Edit or delete`}
+                          label={`${event.title}, ${time}${event.repeatsWeekly ? ', every week' : ''}. Edit or delete`}
                           heading={
                             <MenuHeading
                               title={event.title}
-                              detail={`${formatShortDay(event.start, timeZone)}, ${time} · Fixed`}
+                              detail={`${formatShortDay(event.start, timeZone)}, ${time} · ${event.repeatsWeekly ? 'Weekly' : 'Fixed'}`}
                             />
                           }
                           panelClassName={panelSide}
@@ -154,6 +150,7 @@ export function WeekBoard({
                               </span>
                               <span className="block text-xs leading-snug font-medium break-words text-ink-2">
                                 {event.title}
+                                {event.repeatsWeekly && <RepeatIcon />}
                               </span>
                             </>
                           }

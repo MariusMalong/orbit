@@ -179,3 +179,12 @@ describe('buildDemoData at the weekend', () => {
     ]);
   });
 });
+
+describe('buildDemoData events', () => {
+  it('includes one weekly event', () => {
+    const { commitments } = buildDemoData(friday, timeZone);
+    expect(
+      commitments.filter((c) => c.repeatsWeekly).map((c) => c.title)
+    ).toEqual(['Team check-in']);
+  });
+});

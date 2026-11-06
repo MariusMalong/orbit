@@ -1,5 +1,6 @@
 'use client';
 
+import { useId, useState } from 'react';
 import { Dialog } from '@/components/dialog';
 import { updateCommitment } from '@/app/actions/commitments';
 import {
@@ -16,8 +17,9 @@ interface EditCommitmentProps {
   commitment: {
     id: string;
     title: string;
-    startTime: Date;
+    startTime: Date; // For a weekly event, this occurrence's times
     endTime: Date;
+    repeatsWeekly: boolean;
   };
 }
 
@@ -27,7 +29,11 @@ export function EditCommitmentDialog({
   open,
   onClose,
 }: EditCommitmentProps) {
-  const headingId = `edit-commitment-heading-${commitment.id}`;
+  // Weekly occurrences share an id, so element ids come from useId instead.
+  const uid = useId();
+  const headingId = `${uid}-heading`;
+  // For a weekly event: change just this occurrence, or every week.
+  const [scope, setScope] = useState<'this' | 'all'>('this');
 
   return (
     <Dialog open={open} onClose={onClose} labelledBy={headingId}>
@@ -42,16 +48,47 @@ export function EditCommitmentDialog({
         className="flex flex-col gap-3"
       >
         <input type="hidden" name="commitmentId" value={commitment.id} />
+        <input
+          type="hidden"
+          name="occurrenceStart"
+          value={new Date(commitment.startTime).toISOString()}
+        />
+        <input type="hidden" name="scope" value={scope} />
 
-        <label
-          htmlFor={`edit-commitment-title-${commitment.id}`}
-          className={fieldLabel}
-        >
+        {commitment.repeatsWeekly && (
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="mb-1.5 text-sm font-medium">
+              This event repeats every week. Change:
+            </legend>
+            {(
+              [
+                ['this', 'Only this one'],
+                ['all', 'Every week'],
+              ] as const
+            ).map(([value, label]) => (
+              <label
+                key={value}
+                className="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-lg border border-line px-3 text-sm has-[:checked]:border-accent has-[:checked]:bg-subtle"
+              >
+                <input
+                  type="radio"
+                  name={`${uid}-scope`}
+                  checked={scope === value}
+                  onChange={() => setScope(value)}
+                  className="h-4 w-4 accent-accent"
+                />
+                {label}
+              </label>
+            ))}
+          </fieldset>
+        )}
+
+        <label htmlFor={`${uid}-title`} className={fieldLabel}>
           Event
           <input
             type="text"
             name="title"
-            id={`edit-commitment-title-${commitment.id}`}
+            id={`${uid}-title`}
             defaultValue={commitment.title}
             required
             autoFocus
@@ -61,14 +98,14 @@ export function EditCommitmentDialog({
 
         <div className="flex flex-wrap gap-3">
           <label
-            htmlFor={`edit-commitment-start-${commitment.id}`}
+            htmlFor={`${uid}-start`}
             className={`${fieldLabel} flex-[1_1_160px]`}
           >
             Starts
             <input
               type="datetime-local"
               name="startTime"
-              id={`edit-commitment-start-${commitment.id}`}
+              id={`${uid}-start`}
               defaultValue={formatForDateTimeInput(
                 new Date(commitment.startTime)
               )}
@@ -77,14 +114,14 @@ export function EditCommitmentDialog({
             />
           </label>
           <label
-            htmlFor={`edit-commitment-end-${commitment.id}`}
+            htmlFor={`${uid}-end`}
             className={`${fieldLabel} flex-[1_1_160px]`}
           >
             Ends
             <input
               type="datetime-local"
               name="endTime"
-              id={`edit-commitment-end-${commitment.id}`}
+              id={`${uid}-end`}
               defaultValue={formatForDateTimeInput(
                 new Date(commitment.endTime)
               )}
@@ -93,6 +130,19 @@ export function EditCommitmentDialog({
             />
           </label>
         </div>
+
+        {/* A one-off event can be made weekly; a weekly one can stop repeating. */}
+        {(!commitment.repeatsWeekly || scope === 'all') && (
+          <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-lg border border-line px-3 text-sm font-medium">
+            Repeats every week
+            <input
+              type="checkbox"
+              name="repeatsWeekly"
+              defaultChecked={commitment.repeatsWeekly}
+              className="h-5 w-5 accent-accent"
+            />
+          </label>
+        )}
 
         <div className="mt-2 flex justify-end gap-2">
           <button

@@ -250,6 +250,16 @@ export function QuickAdd({ today }: QuickAddProps) {
               onChange={(e) => setEvent({ ...event, end: e.target.value })}
               className={chip}
             />
+            <label
+              className={`${chip} inline-flex cursor-pointer items-center gap-2 has-[:checked]:border-accent has-[:checked]:font-medium`}
+            >
+              <input
+                type="checkbox"
+                name="repeatsWeekly"
+                className="h-4 w-4 accent-accent"
+              />
+              Every week
+            </label>
           </div>
         )}
 

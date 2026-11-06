@@ -5,6 +5,8 @@ import { buildPlanningDays, type WeeklyHours } from '@/lib/planning/days';
 import { dayLoads } from '@/lib/planning/load';
 import { completeWeek } from '@/lib/planning/weekly-hours';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
+import { startOfZonedDay } from '@/lib/time/zoned';
+import { expandEvents, type EventOccurrence } from '@/lib/planning/recurrence';
 
 /**
  * Everything the Today and Week pages need to draw the plan: the user's open
@@ -18,6 +20,7 @@ export async function loadPlan(userId: string) {
   // server's (Vercel runs in UTC).
   const timeZone = await getUserTimeZone();
   const now = new Date();
+  const startOfToday = startOfZonedDay(now, timeZone);
 
   const [rawTasks, rawCommitments, availability] = await Promise.all([
     // IN_PROGRESS tasks (partially worked via the focus timer) still have
@@ -26,8 +29,13 @@ export async function loadPlan(userId: string) {
       where: { userId, status: { in: ['TODO', 'IN_PROGRESS'] } },
       orderBy: { createdAt: 'desc' },
     }),
+    // Weekly events (which may have started long ago) and events that
+    // haven't ended yet. Past one-off events aren't shown anywhere.
     prisma.fixedCommitment.findMany({
-      where: { userId },
+      where: {
+        userId,
+        OR: [{ repeatsWeekly: true }, { endTime: { gt: startOfToday } }],
+      },
       orderBy: { startTime: 'asc' },
     }),
     prisma.availability.findMany({ where: { userId } }),
@@ -52,12 +60,22 @@ export async function loadPlan(userId: string) {
     priority: t.priority,
     deadline: t.deadline,
   }));
-  const commitments = rawCommitments.map((c) => ({
-    id: c.id,
-    title: c.title,
-    start: c.startTime,
-    end: c.endTime,
-  }));
+  // Events this week, with each weekly event expanded into its occurrences,
+  // followed by one-off events further ahead (for "Later" under Coming up).
+  const weekEnd = days[days.length - 1].urgentUntil;
+  const commitments: EventOccurrence[] = [
+    ...expandEvents(rawCommitments, startOfToday, weekEnd, timeZone),
+    ...rawCommitments
+      .filter((c) => !c.repeatsWeekly && c.startTime >= weekEnd)
+      .map((c) => ({
+        key: c.id,
+        id: c.id,
+        title: c.title,
+        start: c.startTime,
+        end: c.endTime,
+        repeatsWeekly: false,
+      })),
+  ];
   const busy: TimeWindow[] = commitments.map((c) => ({
     start: c.start,
     end: c.end,

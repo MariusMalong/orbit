@@ -68,8 +68,9 @@ interface EventMenuProps extends MenuLayout {
   commitment: {
     id: string;
     title: string;
-    startTime: Date;
+    startTime: Date; // For a weekly event, the clicked occurrence's times
     endTime: Date;
+    repeatsWeekly: boolean;
   };
 }
 
@@ -77,10 +78,13 @@ export function EventMenu({ commitment, heading, ...layout }: EventMenuProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const remove = () =>
+  // For a weekly event, "this" skips only the clicked occurrence.
+  const remove = (scope: 'this' | 'all') =>
     startTransition(async () => {
       const formData = new FormData();
       formData.set('commitmentId', commitment.id);
+      formData.set('scope', scope);
+      formData.set('occurrenceStart', commitment.startTime.toISOString());
       await deleteCommitment(formData);
     });
 
@@ -89,9 +93,28 @@ export function EventMenu({ commitment, heading, ...layout }: EventMenuProps) {
       <Popover {...layout}>
         {heading}
         <MenuButton onClick={() => setIsEditing(true)}>Edit</MenuButton>
-        <MenuButton onClick={remove} disabled={isPending} danger>
-          Delete
-        </MenuButton>
+        {commitment.repeatsWeekly ? (
+          <>
+            <MenuButton
+              onClick={() => remove('this')}
+              disabled={isPending}
+              danger
+            >
+              Delete this one
+            </MenuButton>
+            <MenuButton
+              onClick={() => remove('all')}
+              disabled={isPending}
+              danger
+            >
+              Delete every week
+            </MenuButton>
+          </>
+        ) : (
+          <MenuButton onClick={() => remove('all')} disabled={isPending} danger>
+            Delete
+          </MenuButton>
+        )}
       </Popover>
       <EditCommitmentDialog
         commitment={commitment}
