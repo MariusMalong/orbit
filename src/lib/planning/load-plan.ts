@@ -3,6 +3,7 @@ import type { SchedulableTask, TimeWindow } from '@/lib/engine/scheduler';
 import { generateMultiDaySchedule } from '@/lib/engine/multi-day';
 import { buildPlanningDays, type WeeklyHours } from '@/lib/planning/days';
 import { dayLoads } from '@/lib/planning/load';
+import { completeWeek } from '@/lib/planning/weekly-hours';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
 
 /**
@@ -32,12 +33,13 @@ export async function loadPlan(userId: string) {
     prisma.availability.findMany({ where: { userId } }),
   ]);
 
-  // Working hours for each day of the week (missing days use 09:00 - 17:00),
-  // turned into the next 7 planning days in the visitor's timezone.
+  // Working hours and days off for each day of the week (missing days are
+  // 09:00 - 17:00 workdays), turned into the next 7 planning days in the
+  // visitor's timezone.
   const weeklyHours: WeeklyHours = Object.fromEntries(
     availability.map((a) => [
       a.dayOfWeek,
-      { startTime: a.startTime, endTime: a.endTime },
+      { startTime: a.startTime, endTime: a.endTime, isDayOff: a.isDayOff },
     ])
   );
   const days = buildPlanningDays(now, timeZone, weeklyHours);
@@ -84,6 +86,7 @@ export async function loadPlan(userId: string) {
     tasks,
     commitments,
     days,
+    week: completeWeek(weeklyHours), // For the working-hours editor
     plan,
     loads,
   };
