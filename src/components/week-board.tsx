@@ -134,7 +134,6 @@ export function WeekBoard({
                             endTime: event.end,
                             repeatsWeekly: event.repeatsWeekly,
                           }}
-                          label={`${event.title}, ${time}${event.repeatsWeekly ? ', every week' : ''}. Edit or delete`}
                           heading={
                             <MenuHeading
                               title={event.title}
@@ -152,6 +151,10 @@ export function WeekBoard({
                                 {event.title}
                                 {event.repeatsWeekly && <RepeatIcon />}
                               </span>
+                              <span className="sr-only">
+                                {event.repeatsWeekly ? ' · Weekly' : ''}. Edit
+                                or delete
+                              </span>
                             </>
                           }
                         />
@@ -165,7 +168,6 @@ export function WeekBoard({
                     <li key={`task-${task.id}-${item.start.getTime()}`}>
                       <TaskMenu
                         task={{ ...task, deadline: task.deadline ?? null }}
-                        label={`${task.title}, ${time}${isLate ? ', late' : ''}. Edit, mark as done or delete`}
                         heading={
                           <MenuHeading
                             title={task.title}
@@ -187,6 +189,9 @@ export function WeekBoard({
                                 Late
                               </span>
                             )}
+                            <span className="sr-only">
+                              . Edit, mark as done or delete
+                            </span>
                           </>
                         }
                       />

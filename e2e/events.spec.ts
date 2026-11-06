@@ -23,7 +23,7 @@ test('adds a weekly event and deletes every week of it', async ({ page }) => {
 
   await page.getByRole('link', { name: 'Week', exact: true }).click();
   const gym = page.getByRole('button', {
-    name: 'Gym, 10:00–11:00, every week. Edit or delete',
+    name: /^10:00–11:00\s*Gym\s*· Weekly\. Edit or delete$/,
   });
   await expect(gym).toBeVisible();
 
@@ -35,7 +35,7 @@ test('adds a weekly event and deletes every week of it', async ({ page }) => {
 });
 
 test('deletes only one week of a weekly event', async ({ page }) => {
-  const checkIn = page.getByRole('button', { name: /^Team check-in, / });
+  const checkIn = page.getByRole('button', { name: /^Team check-in\b/ });
   await expect(checkIn).toHaveCount(1);
 
   await checkIn.click();
@@ -50,7 +50,7 @@ test('deletes only one week of a weekly event', async ({ page }) => {
 });
 
 test('moves every week of a weekly event', async ({ page }) => {
-  await page.getByRole('button', { name: /^Team check-in, / }).click();
+  await page.getByRole('button', { name: /^Team check-in\b/ }).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
 
   const dialog = page.getByRole('dialog', { name: 'Edit event' });
@@ -60,10 +60,12 @@ test('moves every week of a weekly event', async ({ page }) => {
   await expect(dialog).toBeHidden();
 
   await expect(
-    page.getByRole('button', { name: /^Weekly sync, .*every week/ })
+    page.getByRole('button', {
+      name: /^Weekly sync\b.*· Weekly\s*\.\s*Edit or delete$/,
+    })
   ).toBeVisible();
   await expect(
-    page.getByRole('button', { name: /^Team check-in, / })
+    page.getByRole('button', { name: /^Team check-in\b/ })
   ).toHaveCount(0);
 });
 
@@ -71,10 +73,10 @@ test('clicking an upcoming hour on the timeline starts an event there', async ({
   page,
 }) => {
   const hour = page
-    .getByRole('button', { name: /^Add an event at \d\d:00$/ })
+    .getByRole('button', { name: /^Add event at \d\d:00$/ })
     .first();
   const label = (await hour.getAttribute('aria-label')) ?? '';
-  const time = label.replace('Add an event at ', '');
+  const time = label.replace('Add event at ', '');
 
   await hour.click();
 

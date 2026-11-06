@@ -19,7 +19,6 @@ export function RepeatIcon() {
         <path d="M7 22l-4-4 4-4" />
         <path d="M21 13v2a3 3 0 0 1-3 3H3" />
       </svg>
-      <span className="sr-only"> (weekly)</span>
     </>
   );
 }

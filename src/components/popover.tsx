@@ -3,8 +3,13 @@
 import { useEffect, useId, useRef, useState } from 'react';
 
 interface PopoverProps {
-  /** Accessible name for the trigger button. */
-  label: string;
+  /**
+   * Accessible name for the trigger, for triggers without text (like "⋯").
+   * Leave it out when the trigger shows text: the visible text is then the
+   * name, so it always matches what people see (WCAG 2.5.3), and anything
+   * extra can go in a visually hidden span inside the trigger.
+   */
+  label?: string;
   /** What the trigger button shows. */
   trigger: React.ReactNode;
   triggerClassName: string;

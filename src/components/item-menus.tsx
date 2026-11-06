@@ -12,7 +12,7 @@ import { MenuButton, Popover } from '@/components/popover';
 // outside the popover, so it stays open after the menu closes.
 
 interface MenuLayout {
-  label: string;
+  label?: string; // Only for triggers without visible text (see Popover)
   trigger: React.ReactNode;
   triggerClassName: string;
   className?: string;

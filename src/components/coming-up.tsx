@@ -134,7 +134,6 @@ export function ComingUp({
                           endTime: event.end,
                           repeatsWeekly: event.repeatsWeekly,
                         }}
-                        label={`${event.title}, ${time}${event.repeatsWeekly ? ', every week' : ''}. Edit or delete`}
                         heading={
                           <MenuHeading
                             title={event.title}
@@ -153,6 +152,7 @@ export function ComingUp({
                             <span className="shrink-0 text-xs text-muted">
                               {event.repeatsWeekly ? 'Weekly' : 'Fixed'}
                             </span>
+                            <span className="sr-only">. Edit or delete</span>
                           </>
                         }
                       />
@@ -165,7 +165,6 @@ export function ComingUp({
                   <li key={`task-${task.id}-${item.start.getTime()}`}>
                     <TaskMenu
                       task={{ ...task, deadline: task.deadline ?? null }}
-                      label={`${task.title}, ${time}. Edit, mark as done or delete`}
                       heading={
                         <MenuHeading
                           title={task.title}
@@ -187,6 +186,9 @@ export function ComingUp({
                           )}
                           <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-medium">
                             {PRIORITY_LABELS[task.priority] ?? ''}
+                          </span>
+                          <span className="sr-only">
+                            . Edit, mark as done or delete
                           </span>
                         </>
                       }

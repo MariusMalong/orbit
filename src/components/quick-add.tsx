@@ -286,7 +286,7 @@ export function AddEventButton({
   children,
 }: {
   draft: EventDraft;
-  label: string;
+  label?: string; // Only when the visible text alone isn't enough
   className: string;
   style?: React.CSSProperties;
   children: React.ReactNode;
