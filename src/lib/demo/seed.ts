@@ -41,10 +41,11 @@ export type DemoAvailability = {
   dayOfWeek: number; // 0 = Sunday
   startTime: string; // "HH:MM"
   endTime: string; // "HH:MM"
+  isDayOff: boolean;
 };
 
 export type DemoData = {
-  availability: DemoAvailability;
+  availability: DemoAvailability[]; // Today's hours first, then the weekend off
   tasks: DemoTask[];
   commitments: DemoCommitment[];
 };
@@ -78,11 +79,24 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
   // stats just count less of it.)
   const ago = (minutes: number) => new Date(now.getTime() - minutes * 60_000);
 
-  const availability: DemoAvailability = {
-    dayOfWeek: weekday,
-    startTime: toHHMM(startMinute),
-    endTime: toHHMM(startMinute + WORKDAY_MINUTES),
-  };
+  // Today's workday is built around now. The weekend is off, to show days
+  // off on the Week page, unless the demo starts at the weekend.
+  const availability: DemoAvailability[] = [
+    {
+      dayOfWeek: weekday,
+      startTime: toHHMM(startMinute),
+      endTime: toHHMM(startMinute + WORKDAY_MINUTES),
+      isDayOff: false,
+    },
+    ...[6, 0]
+      .filter((day) => day !== weekday)
+      .map((dayOfWeek) => ({
+        dayOfWeek,
+        startTime: '09:00',
+        endTime: '17:00',
+        isDayOff: true,
+      })),
+  ];
 
   const commitments: DemoCommitment[] = [
     // Starts 30–60 minutes after now, so the first block is a useful length.
