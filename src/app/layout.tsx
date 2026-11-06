@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import { AuthButton } from '@/components/auth-button';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { TimezoneSync } from '@/components/timezone-sync';
+import { parseTheme, THEME_COOKIE } from '@/lib/theme';
 
 // Exposed as CSS variables and mapped to font-sans / font-display in globals.css.
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -17,13 +20,20 @@ export const metadata: Metadata = {
   description: 'Adaptive daily planning and task management.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // "system" leaves data-theme off, so the CSS follows the device setting.
+  const theme = parseTheme((await cookies()).get(THEME_COOKIE)?.value);
+
   return (
-    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
+    <html
+      lang="en"
+      className={`${inter.variable} ${spaceGrotesk.variable}`}
+      data-theme={theme === 'system' ? undefined : theme}
+    >
       <body className="flex min-h-screen flex-col bg-canvas font-sans text-ink antialiased">
         <TimezoneSync />
         <header className="sticky top-0 z-50 border-b border-line bg-surface">
@@ -49,7 +59,10 @@ export default function RootLayout({
               </svg>
               <span className="font-display text-lg font-semibold">Orbit</span>
             </div>
-            <AuthButton />
+            <div className="flex items-center gap-3">
+              <ThemeToggle initialTheme={theme} />
+              <AuthButton />
+            </div>
           </div>
         </header>
         <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8 md:px-6">
