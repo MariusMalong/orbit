@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { auth, signIn } from '@/auth';
+import { auth, googleEnabled, signIn } from '@/auth';
 import { startDemo } from '@/app/actions/demo';
 import { buttonAccent, buttonSecondary, panel } from '@/components/ui-classes';
 
@@ -11,13 +11,15 @@ export const metadata: Metadata = {
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ demo?: string }>;
+  searchParams: Promise<{ demo?: string; error?: string }>;
 }) {
   const session = await auth();
   if (session?.user) {
     redirect('/');
   }
-  const demoLimited = (await searchParams).demo === 'limited';
+  const params = await searchParams;
+  const demoLimited = params.demo === 'limited';
+  const error = params.error ? signInErrorMessage(params.error) : null;
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-8 py-6">
@@ -40,8 +42,16 @@ export default async function SignInPage({
               className="rounded-lg border border-warning-line bg-warning-bg px-3 py-2.5 text-sm text-warning-ink"
             >
               Lots of demos have been started recently, so new ones are paused
-              for a little while. Please try again in an hour, or sign in with
-              GitHub.
+              for a little while. Please try again in an hour, or sign in
+              instead.
+            </p>
+          )}
+          {error && (
+            <p
+              role="alert"
+              className="rounded-lg border border-warning-line bg-warning-bg px-3 py-2.5 text-sm text-warning-ink"
+            >
+              {error}
             </p>
           )}
           <form action={startDemo}>
@@ -61,17 +71,43 @@ export default async function SignInPage({
           <span className="h-px flex-1 bg-line" />
         </div>
 
-        <form
-          action={async () => {
-            'use server';
-            await signIn('github', { redirectTo: '/' });
-          }}
-        >
-          <button type="submit" className={`${buttonSecondary} w-full`}>
-            Sign in with GitHub
-          </button>
-        </form>
+        <div className="flex flex-col gap-2">
+          <form
+            action={async () => {
+              'use server';
+              await signIn('github', { redirectTo: '/' });
+            }}
+          >
+            <button type="submit" className={`${buttonSecondary} w-full`}>
+              Sign in with GitHub
+            </button>
+          </form>
+          {googleEnabled && (
+            <form
+              action={async () => {
+                'use server';
+                await signIn('google', { redirectTo: '/' });
+              }}
+            >
+              <button type="submit" className={`${buttonSecondary} w-full`}>
+                Sign in with Google
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );
+}
+
+/** What went wrong, for the error codes Auth.js sends back to this page. */
+function signInErrorMessage(code: string): string {
+  switch (code) {
+    case 'OAuthAccountNotLinked':
+      return 'That email address is already used by an Orbit account that signs in another way. Sign in the way you did before.';
+    case 'AccessDenied':
+      return 'Sign-in was cancelled.';
+    default:
+      return 'Something went wrong while signing in. Please try again.';
+  }
 }
