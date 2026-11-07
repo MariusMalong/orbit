@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { auth, signOut } from '@/auth';
 import { buttonSecondary } from '@/components/ui-classes';
 
@@ -18,7 +19,13 @@ export async function AuthButton() {
           className="h-8 w-8 rounded-full border border-line"
         />
       )}
-      <span className="text-sm text-muted">{session.user.name}</span>
+      <Link
+        href="/account"
+        className="rounded text-sm text-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+      >
+        {session.user.name}
+        <span className="sr-only"> (account)</span>
+      </Link>
       {session.user.isDemo && (
         <span className="rounded-full bg-accent-tint px-2 py-0.5 text-xs font-medium">
           Demo

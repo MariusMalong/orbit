@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ demo?: string; error?: string }>;
+  searchParams: Promise<{ demo?: string; error?: string; deleted?: string }>;
 }) {
   const session = await auth();
   if (session?.user) {
@@ -19,6 +19,7 @@ export default async function SignInPage({
   }
   const params = await searchParams;
   const demoLimited = params.demo === 'limited';
+  const deleted = params.deleted === '1';
   const error = params.error ? signInErrorMessage(params.error) : null;
 
   return (
@@ -36,6 +37,14 @@ export default async function SignInPage({
 
       <div className={`${panel} flex flex-col gap-4 md:p-6`}>
         <div className="flex flex-col gap-2">
+          {deleted && (
+            <p
+              role="status"
+              className="rounded-lg border border-line bg-subtle px-3 py-2.5 text-sm text-ink-2"
+            >
+              Your account and everything in it have been deleted.
+            </p>
+          )}
           {demoLimited && (
             <p
               role="status"

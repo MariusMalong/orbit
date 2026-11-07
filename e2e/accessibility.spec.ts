@@ -37,6 +37,23 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectAccessible(page);
     });
 
+    test('privacy policy', async ({ page }) => {
+      await page.goto('/privacy');
+      await expectAccessible(page);
+    });
+
+    test('account page and the delete dialog', async ({ page }) => {
+      await startDemo(page);
+      await page.goto('/account');
+      await expectAccessible(page);
+
+      await page.getByRole('button', { name: 'Delete my account' }).click();
+      await expect(
+        page.getByRole('dialog', { name: 'Delete your account?' })
+      ).toBeVisible();
+      await expectAccessible(page);
+    });
+
     test('Today, with a task menu open', async ({ page }) => {
       await startDemo(page);
       await expectAccessible(page);

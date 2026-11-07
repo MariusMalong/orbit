@@ -54,6 +54,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - On a phone, see what to do now at the top of the page, with a large Start focus button and the next few things after it.
 - Use a focus timer on any task from the task list. Stopping it logs the time worked, takes it off the task's remaining estimate (completing the task when it reaches zero), and redraws the plan.
 - A summary of the day: time focused, tasks completed versus planned, and time still scheduled.
+- Delete your account, and everything in it, from the Account page (click your name in the header). The [privacy policy](https://use-orbitplanner.vercel.app/privacy) lists everything Orbit stores.
 - Light and dark themes. By default Orbit follows your device's setting; the switch in the header can fix it to light or dark, and the choice is remembered.
 
 ## Design decisions

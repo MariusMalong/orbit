@@ -24,3 +24,5 @@ export const buttonSecondary = `${buttonBase} border border-line bg-surface text
 export const iconButtonDanger =
   'inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-line bg-surface text-danger ' +
   'transition hover:bg-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60';
+
+export const buttonDanger = `${buttonBase} border border-danger bg-surface font-semibold text-danger hover:bg-subtle`;
