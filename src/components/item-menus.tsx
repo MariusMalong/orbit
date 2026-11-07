@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { completeTask, deleteTask } from '@/app/actions/task';
+import { completeTask, deleteTask, placeTask } from '@/app/actions/task';
 import { deleteCommitment } from '@/app/actions/commitments';
 import { EditTaskDialog } from '@/components/edit-task-dialog';
 import { EditCommitmentDialog } from '@/components/edit-commitment-dialog';
@@ -29,6 +29,7 @@ interface TaskMenuProps extends MenuLayout {
     durationEstimate: number;
     priority: number;
     deadline: Date | null;
+    plannedStart?: Date | null; // Set when the user placed it at a time
   };
 }
 
@@ -48,6 +49,12 @@ export function TaskMenu({ task, heading, ...layout }: TaskMenuProps) {
       <Popover {...layout}>
         {heading}
         <MenuButton onClick={() => setIsEditing(true)}>Edit</MenuButton>
+        {task.plannedStart && (
+          // An empty start hands the task back to the planner.
+          <MenuButton onClick={() => run(placeTask)} disabled={isPending}>
+            Let Orbit plan it
+          </MenuButton>
+        )}
         <MenuButton onClick={() => run(completeTask)} disabled={isPending}>
           Mark as done
         </MenuButton>
