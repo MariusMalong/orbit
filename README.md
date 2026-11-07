@@ -36,6 +36,8 @@ On its own, rolling forward like that would leave a big task due on Wednesday un
 
 Work is only pulled forward when it's really needed, so when there's room later, your priorities decide. The Week page compares the plan with one made by priority alone ([`src/lib/engine/changes.ts`](src/lib/engine/changes.ts)) and says what started early for a deadline and what moved later to make room. Deadlines are then checked against when each task actually finishes, so a task that can't make it even when started as early as possible is flagged straight away.
 
+You can also place a task yourself, by dragging it on the timeline or the Week board, or by giving it a start time. Placed tasks are planned first, at their time, around your events, and from then on everything else treats them like an event. A placed task that runs past the end of its day continues on the next working day. When its time has passed, or you choose "Let Orbit plan it", it goes back to being planned automatically.
+
 The plan isn't stored. It's recalculated on every page load from the current data, so editing a task, adding a meeting or logging time changes it immediately.
 
 ## What works today
@@ -43,6 +45,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Sign in with GitHub, or try a demo account with sample data. A new account starts with a short setup: your working hours and days off, and a few first tasks.
 - Add tasks and fixed commitments (events, such as appointments or lectures) from one quick-add bar at the top of the page. Each task has a title, a time estimate, a priority (low, medium or high) and an optional due date and time.
 - Click an upcoming hour or a free slot on the timeline to add an event there, and click any block to edit it, mark it as done or delete it.
+- Drag a task up or down the timeline to a new time, or to another day on the Week page, and the rest of the plan moves around it. With a keyboard or on a touch screen, set a start time in the task's edit dialog instead.
 - Make an event repeat every week, such as a lecture or a gym session. Edit or delete just one week of it, or every week at once.
 - Set your working hours for the whole week in one place, and mark days off: nothing gets planned on them, and work moves to the next working day.
 - See whatever doesn't fit today planned into the following days, next to your upcoming events, under "Coming up", and how full each day of the week is.
@@ -74,7 +77,8 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ## Next steps
 
-- When a deadline later in the week is at risk, plan backwards from it and pull the task into earlier days, instead of only flagging it.
+- Plan for deadlines beyond the 7-day window.
+- Drag tasks on touch screens, with a long press.
 - Projects for grouping tasks, and saved schedules. The `Project`, `Schedule` and `ScheduleBlock` models are already in the schema but aren't used yet.
 
 ## Tech stack
