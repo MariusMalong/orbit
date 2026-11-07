@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { Inter, Space_Grotesk } from 'next/font/google';
@@ -74,6 +75,11 @@ export default async function RootLayout({
         <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8 md:px-6">
           {children}
         </main>
+        <footer className="mx-auto w-full max-w-6xl px-4 pb-6 text-xs text-muted md:px-6">
+          <Link href="/privacy" className="underline hover:text-ink">
+            Privacy policy
+          </Link>
+        </footer>
       </body>
     </html>
   );
