@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { generateMultiDaySchedule, PlanningDay } from './multi-day';
+import {
+  generateMultiDaySchedule,
+  plannedDayIndex,
+  PlanningDay,
+} from './multi-day';
 import { generateSchedule, SchedulableTask } from './scheduler';
 
 // Fixed dates, server-local, so every test is deterministic: Thursday 5 Nov
@@ -258,6 +262,136 @@ describe('generateMultiDaySchedule', () => {
   });
 });
 
+describe('tasks the user placed', () => {
+  const placedTask = (
+    id: string,
+    durationEstimate: number,
+    plannedStart: Date,
+    priority = 1
+  ): SchedulableTask => ({
+    ...task(id, durationEstimate, priority),
+    plannedStart,
+  });
+
+  it('plans a placed task at its start, ahead of higher priorities', () => {
+    const result = generateMultiDaySchedule(
+      [task('high', 120, 3), placedTask('placed', 60, on(5, '09:30'))],
+      [],
+      threeDays
+    );
+
+    expect(blocksFor(result, 'placed')).toEqual([
+      { dayIndex: 0, startTime: on(5, '09:30'), endTime: on(5, '10:30') },
+    ]);
+    // Other work fits around it, as around an event.
+    expect(blocksFor(result, 'high')).toEqual([
+      { dayIndex: 0, startTime: on(5, '09:00'), endTime: on(5, '09:30') },
+      { dayIndex: 0, startTime: on(5, '10:30'), endTime: on(5, '12:00') },
+    ]);
+  });
+
+  it('places a task on a later day, and plans nothing of it before then', () => {
+    const result = generateMultiDaySchedule(
+      [placedTask('placed', 60, on(7, '14:00'), 3)],
+      [],
+      threeDays
+    );
+
+    expect(blocksFor(result, 'placed')).toEqual([
+      { dayIndex: 2, startTime: on(7, '14:00'), endTime: on(7, '15:00') },
+    ]);
+  });
+
+  it('splits a placed task around events, and carries the rest to the next day', () => {
+    const result = generateMultiDaySchedule(
+      [placedTask('placed', 180, on(5, '15:00'))],
+      [{ start: on(5, '15:30'), end: on(5, '16:00') }],
+      threeDays
+    );
+
+    expect(blocksFor(result, 'placed')).toEqual([
+      { dayIndex: 0, startTime: on(5, '15:00'), endTime: on(5, '15:30') },
+      { dayIndex: 0, startTime: on(5, '16:00'), endTime: on(5, '17:00') },
+      { dayIndex: 1, startTime: on(6, '09:00'), endTime: on(6, '10:30') },
+    ]);
+  });
+
+  it('starts a task placed before working hours when the day starts', () => {
+    const result = generateMultiDaySchedule(
+      [placedTask('placed', 60, on(6, '07:00'))],
+      [],
+      threeDays
+    );
+
+    expect(blocksFor(result, 'placed')[0].startTime).toEqual(on(6, '09:00'));
+  });
+
+  it('puts two placed tasks that overlap one after the other', () => {
+    const result = generateMultiDaySchedule(
+      [
+        placedTask('second', 60, on(5, '10:30')),
+        placedTask('first', 60, on(5, '10:00')),
+      ],
+      [],
+      threeDays
+    );
+
+    expect(blocksFor(result, 'first')[0].startTime).toEqual(on(5, '10:00'));
+    expect(blocksFor(result, 'second')[0].startTime).toEqual(on(5, '11:00'));
+  });
+
+  it('keeps deadline work clear of time taken by a placed task', () => {
+    // Saturday is the only day before the deadline with room, and the placed
+    // task takes most of it, so the report has to start on Friday.
+    const days = [workday(5, '09:00', '09:00'), workday(6), workday(7)];
+    const result = generateMultiDaySchedule(
+      [
+        task('high', 480, 3),
+        task('report', 120, 1, on(7, '17:00')),
+        placedTask('placed', 420, on(7, '09:00')),
+      ],
+      [],
+      days
+    );
+
+    expect(result.lateTaskIds).toEqual([]);
+    expect(blocksFor(result, 'report')[0].dayIndex).toBe(1);
+  });
+
+  it('reports a task placed after its deadline as late', () => {
+    const result = generateMultiDaySchedule(
+      [
+        {
+          ...placedTask('placed', 60, on(6, '10:00')),
+          deadline: on(5, '17:00'),
+        },
+      ],
+      [],
+      threeDays
+    );
+
+    expect(result.lateTaskIds).toEqual(['placed']);
+  });
+
+  it('ignores a start that has passed, but keeps one that is still running', () => {
+    const today = [workday(5, '11:00'), workday(6)];
+
+    // Started at 09:00 and would have ended at 10:00: planned as usual.
+    expect(plannedDayIndex(on(5, '09:00'), 60, today)).toBeNull();
+    // Started at 10:30 and still running: planned from now.
+    expect(plannedDayIndex(on(5, '10:30'), 60, today)).toBe(0);
+    const result = generateMultiDaySchedule(
+      [placedTask('placed', 60, on(5, '10:30'))],
+      [],
+      today
+    );
+    expect(blocksFor(result, 'placed')[0].startTime).toEqual(on(5, '11:00'));
+
+    // After the last day.
+    expect(plannedDayIndex(on(9, '10:00'), 60, today)).toBeNull();
+  });
+});
+
 describe('generateMultiDaySchedule, on randomly generated weeks', () => {
   // A small seeded random generator, so a failure can be reproduced.
   function random(seed: number) {
@@ -295,8 +429,8 @@ describe('generateMultiDaySchedule, on randomly generated weeks', () => {
         const length = (30 + pick(2) * 30) * 60_000; // 30 or 60 minutes
         return { start, end: new Date(start.getTime() + length) };
       });
-      const tasks = Array.from({ length: 1 + pick(8) }, (_, i) =>
-        task(
+      const tasks = Array.from({ length: 1 + pick(8) }, (_, i) => ({
+        ...task(
           `t${i}`,
           5 * (1 + pick(60)),
           1 + pick(3),
@@ -305,8 +439,15 @@ describe('generateMultiDaySchedule, on randomly generated weeks', () => {
                 `2026-11-0${5 + pick(5)}T${String(9 + pick(9)).padStart(2, '0')}:00:00`
               )
             : null
-        )
-      );
+        ),
+        // Some tasks placed by the user, sometimes outside working hours.
+        plannedStart:
+          rand() < 0.3
+            ? new Date(
+                `2026-11-0${5 + pick(5)}T${String(6 + pick(14)).padStart(2, '0')}:${pick(4) * 15 || '00'}:00`
+              )
+            : null,
+      }));
 
       const { scheduledBlocks } = generateMultiDaySchedule(
         tasks,
@@ -337,6 +478,13 @@ describe('generateMultiDaySchedule, on randomly generated weeks', () => {
           .filter((b) => b.taskId === t.id)
           .reduce((sum, b) => sum + minutes(b), 0);
         expect(planned <= t.durationEstimate, context).toBe(true);
+
+        // Nothing of a placed task is planned before its start.
+        if (t.plannedStart) {
+          for (const b of scheduledBlocks.filter((b) => b.taskId === t.id)) {
+            expect(b.startTime >= t.plannedStart, context).toBe(true);
+          }
+        }
       }
     }
   });
