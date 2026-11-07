@@ -76,7 +76,7 @@ export default async function WeekPage() {
           </h1>
           <p className="mt-1 text-muted">
             Whatever doesn&apos;t fit one day moves to the next working day.
-            Click anything to change it.
+            Click anything to change it, or drag a task to another day.
           </p>
         </div>
         <WorkingHours

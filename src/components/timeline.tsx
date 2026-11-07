@@ -11,6 +11,7 @@ import { EventMenu, MenuHeading, TaskMenu } from '@/components/item-menus';
 import { AddEventButton } from '@/components/quick-add';
 import type { EventOccurrence } from '@/lib/planning/recurrence';
 import { RepeatIcon } from '@/components/repeat-icon';
+import { TimelineDraggable } from '@/components/draggable-task';
 
 interface TimelineProps {
   scheduledBlocks: ScheduleBlockResult[];
@@ -130,7 +131,7 @@ export function Timeline({
               ? `Planned from ${formatClock(planStart, timeZone)}. `
               : ''}
             Click an hour or a free slot to add an event, or a block to change
-            it.
+            it. Drag a task to move it.
           </p>
         </div>
         <div className="shrink-0">{headerAction}</div>
@@ -263,46 +264,58 @@ export function Timeline({
           const time = `${formatClock(block.startTime, timeZone)} – ${formatClock(block.endTime, timeZone)}`;
           const priority = PRIORITY_LABELS[task.priority] ?? '';
 
+          const placed = task.plannedStart ? ' · Your time' : '';
+
           return (
-            <TaskMenu
+            <TimelineDraggable
               key={`${block.taskId}-${index}`}
-              task={{ ...task, deadline: task.deadline ?? null }}
-              heading={
-                <MenuHeading
-                  title={task.title}
-                  detail={`${time} · ${minutes} min`}
-                />
-              }
+              taskId={task.id}
+              start={block.startTime}
+              earliest={planStart}
+              latest={gridEnd}
+              pxPerMinute={PX_PER_MINUTE}
+              timeZone={timeZone}
               className="absolute right-1 left-16"
               style={{ top, height }}
-              triggerClassName={`flex h-full w-full cursor-pointer items-start justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 text-left shadow-[inset_3px_0_0_var(--color-accent-edge)] transition hover:brightness-[0.97] focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${isCompact ? 'py-1' : 'py-2.5'}`}
-              trigger={
-                <>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold">
-                      {task.title}
-                    </span>
-                    {isCompact ? (
-                      <span className="sr-only">
-                        , {time} · {minutes} min
+            >
+              <TaskMenu
+                task={{ ...task, deadline: task.deadline ?? null }}
+                heading={
+                  <MenuHeading
+                    title={task.title}
+                    detail={`${time} · ${minutes} min${placed}`}
+                  />
+                }
+                className="relative h-full"
+                triggerClassName={`flex h-full w-full cursor-pointer items-start justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 text-left shadow-[inset_3px_0_0_var(--color-accent-edge)] transition hover:brightness-[0.97] focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${isCompact ? 'py-1' : 'py-2.5'}`}
+                trigger={
+                  <>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold">
+                        {task.title}
                       </span>
-                    ) : (
-                      <span className="block text-xs text-ink-2">
-                        {time} · {minutes} min
+                      {isCompact ? (
+                        <span className="sr-only">
+                          , {time} · {minutes} min{placed}
+                        </span>
+                      ) : (
+                        <span className="block text-xs text-ink-2">
+                          {time} · {minutes} min{placed}
+                        </span>
+                      )}
+                    </span>
+                    {priority && !isCompact && (
+                      <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-medium">
+                        {priority}
                       </span>
                     )}
-                  </span>
-                  {priority && !isCompact && (
-                    <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-medium">
-                      {priority}
+                    <span className="sr-only">
+                      . Edit, mark as done or delete
                     </span>
-                  )}
-                  <span className="sr-only">
-                    . Edit, mark as done or delete
-                  </span>
-                </>
-              }
-            />
+                  </>
+                }
+              />
+            </TimelineDraggable>
           );
         })}
 
