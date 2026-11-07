@@ -20,6 +20,11 @@ import { mustPlanToday } from './reservations';
 // and the deadline is planned first, earliest deadline first, and the rest
 // of the day is filled by priority as usual.
 //
+// Before any of that, tasks the user has placed themselves (by dragging them
+// to a time, or setting a start in the edit dialog) are planned at that time
+// and treated like events by everything else. A placed task that doesn't fit
+// before the end of its day carries on in the following days.
+//
 // Deadlines are then checked against when each task actually finishes, so a
 // task that still can't make it, even when started early, is reported now.
 
@@ -56,8 +61,32 @@ export type MultiDayOptions = {
 const FAR_FUTURE = new Date(8.64e15);
 const DEFAULT_MIN_BLOCK_MINUTES = 15;
 
+const MS_PER_MINUTE = 60_000;
+
 const minutesOf = (block: ScheduleBlockResult) =>
-  Math.round((block.endTime.getTime() - block.startTime.getTime()) / 60000);
+  Math.round(
+    (block.endTime.getTime() - block.startTime.getTime()) / MS_PER_MINUTE
+  );
+
+/**
+ * The day a placed task starts on, or null if its start no longer applies:
+ * it's after the planned days, or it's in the past and would already have
+ * ended. A start earlier today that would still be running is kept, and the
+ * task is planned from now.
+ */
+export function plannedDayIndex(
+  plannedStart: Date,
+  durationMinutes: number,
+  days: PlanningDay[]
+): number | null {
+  if (days.length === 0) return null;
+  const wouldEnd = plannedStart.getTime() + durationMinutes * MS_PER_MINUTE;
+  if (plannedStart < days[0].start && wouldEnd <= days[0].start.getTime()) {
+    return null;
+  }
+  const index = days.findIndex((day) => plannedStart < day.urgentUntil);
+  return index === -1 ? null : index;
+}
 
 export function generateMultiDaySchedule(
   tasks: SchedulableTask[],
@@ -71,6 +100,8 @@ export function generateMultiDaySchedule(
   const finishedAt = new Map<string, Date>();
   const scheduledBlocks: DayBlock[] = [];
   const startedEarly = new Set<string>();
+  // Placed tasks only continue after the day they were placed on.
+  const placedOn = new Map<string, number>();
 
   const record = (blocks: ScheduleBlockResult[], dayIndex: number) => {
     for (const block of blocks) {
@@ -81,36 +112,77 @@ export function generateMultiDaySchedule(
     }
   };
 
-  // The open tasks, with their estimate cut down to what's still unplanned.
-  const openTasks = () =>
+  // Pass 0: tasks the user placed, in the order they start. Each one fills
+  // the free time from its start to the end of that day, around events and
+  // the tasks placed before it.
+  let fixed = commitments;
+  const placed = tasks
+    .flatMap((task) => {
+      if (!task.plannedStart) return [];
+      const dayIndex = plannedDayIndex(
+        task.plannedStart,
+        task.durationEstimate,
+        days
+      );
+      return dayIndex === null
+        ? []
+        : [{ task, start: task.plannedStart, dayIndex }];
+    })
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
+  for (const { task, start, dayIndex } of placed) {
+    const day = days[dayIndex];
+    placedOn.set(task.id, dayIndex);
+    const from = start > day.start ? start : day.start;
+    if (from >= day.end) continue;
+    const { scheduledBlocks: blocks } = generateSchedule(
+      [task],
+      fixed,
+      from,
+      day.end,
+      { minBlockMinutes }
+    );
+    record(blocks, dayIndex);
+    fixed = [
+      ...fixed,
+      ...blocks.map((b) => ({ start: b.startTime, end: b.endTime })),
+    ];
+  }
+
+  // The open tasks that can be planned on `dayIndex`, with their estimate
+  // cut down to what's still unplanned.
+  const openTasks = (dayIndex: number) =>
     tasks
-      .filter((t) => (remaining.get(t.id) ?? 0) > 0)
+      .filter(
+        (t) =>
+          (remaining.get(t.id) ?? 0) > 0 &&
+          (placedOn.get(t.id) ?? -1) < dayIndex
+      )
       .map((t) => ({ ...t, durationEstimate: remaining.get(t.id)! }));
 
   days.forEach((day, dayIndex) => {
     if (day.start >= day.end) return; // No working time left that day
 
-    if (openTasks().length === 0) return;
+    if (openTasks(dayIndex).length === 0) return;
 
     // Pass 1: deadline work that can't wait, earliest deadline first.
-    let busy = commitments;
+    let busy = fixed;
     if (planForDeadlines) {
       const must = mustPlanToday(
-        tasks,
+        openTasks(dayIndex),
         remaining,
         days,
         dayIndex,
-        commitments,
+        fixed,
         minBlockMinutes
       );
-      const mustTasks = openTasks()
+      const mustTasks = openTasks(dayIndex)
         .filter((t) => must.has(t.id))
         .map((t) => ({ ...t, durationEstimate: must.get(t.id)! }));
 
       if (mustTasks.length > 0) {
         const { scheduledBlocks: reserved } = generateSchedule(
           mustTasks,
-          commitments,
+          fixed,
           day.start,
           day.end,
           { minBlockMinutes, urgentUntil: FAR_FUTURE }
@@ -121,7 +193,7 @@ export function generateMultiDaySchedule(
           if (task.deadline! >= day.urgentUntil) startedEarly.add(task.id);
         }
         busy = [
-          ...commitments,
+          ...fixed,
           ...reserved.map((b) => ({ start: b.startTime, end: b.endTime })),
         ];
       }
@@ -129,7 +201,7 @@ export function generateMultiDaySchedule(
 
     // Pass 2: everything else, by priority, in the time that's left.
     const { scheduledBlocks: blocks } = generateSchedule(
-      openTasks(),
+      openTasks(dayIndex),
       busy,
       day.start,
       day.end,

@@ -94,6 +94,7 @@ model Task {
   priority         Int
   durationEstimate Int             // In minutes
   deadline         DateTime?
+  plannedStart     DateTime?       // Set when the user places the task at a time; null lets Orbit plan it
   status           TaskStatus      @default(TODO)
   completedAt      DateTime?       // When the task was marked done
   

@@ -60,6 +60,7 @@ export async function loadPlan(userId: string) {
     durationEstimate: t.durationEstimate,
     priority: t.priority,
     deadline: t.deadline,
+    plannedStart: t.plannedStart,
   }));
   // Events this week, with each weekly event expanded into its occurrences,
   // followed by one-off events further ahead (for "Later" under Coming up).

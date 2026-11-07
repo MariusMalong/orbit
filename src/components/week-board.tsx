@@ -6,6 +6,7 @@ import { formatClock, formatMinutes, formatShortDay } from '@/lib/format';
 import { EventMenu, MenuHeading, TaskMenu } from '@/components/item-menus';
 import type { EventOccurrence } from '@/lib/planning/recurrence';
 import { RepeatIcon } from '@/components/repeat-icon';
+import { WeekDraggable } from '@/components/draggable-task';
 
 interface WeekBoardProps {
   days: PlanningDayInfo[]; // Today first
@@ -41,6 +42,13 @@ export function WeekBoard({
 }: WeekBoardProps) {
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const late = new Set(lateTaskIds);
+  // What a dragged task needs to know about each day.
+  const dropDays = days.map((d) => ({
+    date: d.date,
+    start: d.start,
+    end: d.end,
+    isDayOff: d.isDayOff,
+  }));
 
   return (
     <ol className="flex flex-col gap-3 lg:grid lg:grid-cols-7 lg:gap-2">
@@ -79,8 +87,9 @@ export function WeekBoard({
         return (
           <li
             key={day.date.getTime()}
+            data-day-index={i}
             aria-label={`${formatShortDay(day.date, timeZone)}: ${day.isDayOff ? 'day off' : `${load.percent}% full`}`}
-            className={`flex min-w-0 flex-col gap-1.5 rounded-xl border p-2.5 lg:min-h-[28rem] ${
+            className={`flex min-w-0 flex-col gap-1.5 rounded-xl border p-2.5 transition data-[drop-target]:ring-2 data-[drop-target]:ring-accent lg:min-h-[28rem] ${
               day.isDayOff
                 ? 'border-dashed border-line bg-transparent'
                 : `bg-surface ${i === 0 ? 'border-accent' : 'border-line'}`
@@ -166,35 +175,48 @@ export function WeekBoard({
                   const isLate = late.has(task.id);
                   return (
                     <li key={`task-${task.id}-${item.start.getTime()}`}>
-                      <TaskMenu
-                        task={{ ...task, deadline: task.deadline ?? null }}
-                        heading={
-                          <MenuHeading
-                            title={task.title}
-                            detail={`${formatShortDay(item.start, timeZone)}, ${time}`}
-                          />
-                        }
-                        panelClassName={panelSide}
-                        triggerClassName={`${itemClass} bg-accent-tint shadow-[inset_3px_0_0_var(--color-accent-edge)] hover:brightness-[0.97]`}
-                        trigger={
-                          <>
-                            <span className="block text-[11px] text-ink-2 tabular-nums">
-                              {time}
-                            </span>
-                            <span className="block text-xs leading-snug font-semibold break-words">
-                              {task.title}
-                            </span>
-                            {isLate && (
-                              <span className="mt-0.5 block text-[11px] font-semibold text-danger">
-                                Late
+                      <WeekDraggable
+                        taskId={task.id}
+                        start={item.start}
+                        dayIndex={i}
+                        days={dropDays}
+                        timeZone={timeZone}
+                      >
+                        <TaskMenu
+                          task={{ ...task, deadline: task.deadline ?? null }}
+                          heading={
+                            <MenuHeading
+                              title={task.title}
+                              detail={`${formatShortDay(item.start, timeZone)}, ${time}`}
+                            />
+                          }
+                          panelClassName={panelSide}
+                          triggerClassName={`${itemClass} bg-accent-tint shadow-[inset_3px_0_0_var(--color-accent-edge)] hover:brightness-[0.97]`}
+                          trigger={
+                            <>
+                              <span className="block text-[11px] text-ink-2 tabular-nums">
+                                {time}
                               </span>
-                            )}
-                            <span className="sr-only">
-                              . Edit, mark as done or delete
-                            </span>
-                          </>
-                        }
-                      />
+                              <span className="block text-xs leading-snug font-semibold break-words">
+                                {task.title}
+                              </span>
+                              {isLate && (
+                                <span className="mt-0.5 block text-[11px] font-semibold text-danger">
+                                  Late
+                                </span>
+                              )}
+                              {task.plannedStart && (
+                                <span className="block text-[11px] text-muted">
+                                  Your time
+                                </span>
+                              )}
+                              <span className="sr-only">
+                                . Edit, mark as done or delete
+                              </span>
+                            </>
+                          }
+                        />
+                      </WeekDraggable>
                     </li>
                   );
                 })}

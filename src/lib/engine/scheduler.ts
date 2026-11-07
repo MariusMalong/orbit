@@ -5,6 +5,7 @@ export type SchedulableTask = {
   durationEstimate: number; // In minutes
   priority: number; // 3 = High, 1 = low
   deadline?: Date | null; // Optional: when the task has to be finished by
+  plannedStart?: Date | null; // Optional: when the user wants to start it (multi-day only)
 };
 
 export type TimeWindow = {

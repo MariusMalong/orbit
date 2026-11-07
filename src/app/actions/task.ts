@@ -16,6 +16,15 @@ async function readDeadline(formData: FormData): Promise<Date | null> {
   return deadline;
 }
 
+// The optional "Start at" field: empty lets Orbit plan the task.
+async function readPlannedStart(formData: FormData): Promise<Date | null> {
+  const value = (formData.get('plannedStart') as string | null)?.trim();
+  if (!value) return null;
+  const start = parseDateTimeLocal(value, await getUserTimeZone());
+  if (!start) throw new Error('Invalid start time.');
+  return start;
+}
+
 export async function createTask(formData: FormData) {
   // 1. Verify the user's identity securely on the server
   const session = await auth();
@@ -106,6 +115,7 @@ export async function updateTask(formData: FormData) {
   );
   const priority = parseInt(formData.get('priority') as string, 10);
   const deadline = await readDeadline(formData);
+  const plannedStart = await readPlannedStart(formData);
 
   await prisma.task.updateMany({
     where: {
@@ -117,7 +127,35 @@ export async function updateTask(formData: FormData) {
       durationEstimate,
       priority,
       deadline,
+      plannedStart,
     },
+  });
+
+  revalidatePath('/', 'layout');
+}
+
+/**
+ * Places a task at a time (from dragging it on the timeline or the Week
+ * board), or, with an empty `plannedStart`, hands it back to Orbit to plan.
+ * `plannedStart` is an ISO timestamp, since the drag already knows the
+ * exact instant.
+ */
+export async function placeTask(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const taskId = formData.get('taskId') as string;
+  const value = (formData.get('plannedStart') as string | null)?.trim();
+  const plannedStart = value ? new Date(value) : null;
+  if (plannedStart && Number.isNaN(plannedStart.getTime())) {
+    throw new Error('Invalid start time.');
+  }
+
+  await prisma.task.updateMany({
+    where: { id: taskId, userId: session.user.id },
+    data: { plannedStart },
   });
 
   revalidatePath('/', 'layout');

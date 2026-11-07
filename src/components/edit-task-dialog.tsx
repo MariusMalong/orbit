@@ -19,6 +19,7 @@ interface EditTaskProps {
     durationEstimate: number;
     priority: number;
     deadline: Date | null;
+    plannedStart?: Date | null;
   };
 }
 
@@ -98,6 +99,26 @@ export function EditTaskDialog({ task, open, onClose }: EditTaskProps) {
             defaultValue={
               task.deadline
                 ? formatForDateTimeInput(new Date(task.deadline))
+                : ''
+            }
+            className={fieldInput}
+          />
+        </label>
+
+        <label htmlFor={`edit-task-start-${task.id}`} className={fieldLabel}>
+          <span>
+            Start at{' '}
+            <span className="font-normal text-muted">
+              (optional, or leave empty and Orbit plans it)
+            </span>
+          </span>
+          <input
+            type="datetime-local"
+            name="plannedStart"
+            id={`edit-task-start-${task.id}`}
+            defaultValue={
+              task.plannedStart
+                ? formatForDateTimeInput(new Date(task.plannedStart))
                 : ''
             }
             className={fieldInput}
