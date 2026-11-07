@@ -6,7 +6,7 @@ Orbit is a daily planner that builds your schedule for you. You give it tasks (w
 
 **Try it: [use-orbitplanner.vercel.app](https://use-orbitplanner.vercel.app)**
 
-Click **Try the demo** to get your own temporary account, filled with a day of sample tasks and commitments. There's no sign-up, and the account is deleted after 24 hours. Try starting a focus timer, moving a commitment or changing your hours, and watch the plan redraw. You can also sign in with GitHub (Orbit only reads your public profile and email address).
+Click **Try the demo** to get your own temporary account, filled with a day of sample tasks and commitments. There's no sign-up, and the account is deleted after 24 hours. Try starting a focus timer, moving a commitment or changing your hours, and watch the plan redraw. You can also sign in with GitHub or Google (Orbit only reads your name, profile picture and email address).
 
 ![Orbit's Today page in a demo account: a quick-add bar for tasks and events, the rest of the day planned from now around fixed events with a task due today first, and a compact task list](docs/images/dashboard.png)
 
@@ -40,7 +40,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ## What works today
 
-- Sign in with GitHub, or try a demo account with sample data. A new account starts with a short setup: your working hours and days off, and a few first tasks.
+- Sign in with GitHub or Google, or try a demo account with sample data. A new account starts with a short setup: your working hours and days off, and a few first tasks.
 - Add tasks and fixed commitments (events, such as appointments or lectures) from one quick-add bar at the top of the page. Each task has a title, a time estimate, a priority (low, medium or high) and an optional due date and time.
 - Click an upcoming hour or a free slot on the timeline to add an event there, and click any block to edit it, mark it as done or delete it.
 - Make an event repeat every week, such as a lecture or a gym session. Edit or delete just one week of it, or every week at once.
@@ -60,7 +60,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - **Weekly events are stored once and expanded when planning.** A weekly event keeps its first occurrence plus a list of weeks skipped or moved on their own, so editing one week never rewrites the others. Weeks are counted in the visitor's timezone, so a 09:00 lecture stays at 09:00 across daylight-saving changes (`src/lib/planning/recurrence.ts`).
 - **Times are stored as instants and planned in the visitor's timezone.** The server runs in UTC, so "today", "09:00" and "Friday" are worked out in the visitor's own timezone by small `Intl`-based helpers (`src/lib/time/zoned.ts`), which are tested across Melbourne's daylight-saving changes. The browser saves its timezone in a cookie. Until it has, Vercel's IP-based guess is used.
 - **Time is stored in whole minutes.** Durations are integers, which avoids floating-point drift when times are added up and subtracted.
-- **Demo accounts are ordinary users.** "Try the demo" creates a user flagged `isDemo`, fills it from a pure seed function, and creates an Auth.js database session for it. Each visitor gets their own account, and everything else (including the per-user scoping) works exactly as for a GitHub user. Demo accounts older than 24 hours are deleted the next time someone starts a demo.
+- **Demo accounts are ordinary users.** "Try the demo" creates a user flagged `isDemo`, fills it from a pure seed function, and creates an Auth.js database session for it. Each visitor gets their own account, and everything else (including the per-user scoping) works exactly as for a signed-in user. Demo accounts older than 24 hours are deleted the next time someone starts a demo.
 - **Colours are role tokens.** Components use utilities such as `bg-surface` and `text-muted`, which read CSS variables defined in `globals.css`. Dark mode only swaps those variables, so no component needs `dark:` classes. The chosen theme is kept in a cookie, so the server renders the right one straight away, without a flash of the wrong colours.
 - **Demo accounts are rate-limited without storing IP addresses.** Each demo records a keyed hash of the visitor's IP (HMAC with the app's secret), so one visitor can start 10 an hour and everyone together 300. Requests from the machine itself, as in local development and CI, only count towards the overall limit.
 - **Buttons are named by what they show.** A button with visible text has no separate `aria-label`: its text is its name, so voice-control users can say what they see. Anything a screen reader needs beyond that, like the time of a block too short to show it, sits in a visually hidden span inside the button. Icon-only buttons, like the ⋯ menu, have a label.
@@ -82,7 +82,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Next.js 16 (App Router, Server Components, Server Actions) with TypeScript
 - PostgreSQL: [Neon](https://neon.com) in production, Docker locally
 - Prisma 6, with migrations
-- Auth.js v5 with GitHub OAuth
+- Auth.js v5 with GitHub and Google OAuth
 - Tailwind CSS v4
 - Vitest for the engine and analytics tests
 - Hosted on Vercel, with CI on GitHub Actions
@@ -127,6 +127,8 @@ You'll need Node.js 24 (see `.nvmrc`) and Docker.
    ```
 
 3. Create a GitHub OAuth app under **GitHub → Settings → Developer settings → OAuth Apps**. Set the homepage URL to `http://localhost:3000` and the callback URL to `http://localhost:3000/api/auth/callback/github`.
+
+   Google sign-in is optional. To turn it on, create an OAuth client ID (type "Web application") in the [Google Cloud console](https://console.cloud.google.com/apis/credentials) with the redirect URI `http://localhost:3000/api/auth/callback/google`, and set `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`.
 
 4. Copy the example environment file, then fill in `AUTH_SECRET` and your OAuth app's client ID and secret:
 
