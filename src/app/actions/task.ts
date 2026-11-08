@@ -25,6 +25,21 @@ async function readPlannedStart(formData: FormData): Promise<Date | null> {
   return start;
 }
 
+// The optional project. Only one of the user's own projects can be set, so
+// a forged id from someone else's account is quietly ignored.
+async function readProjectId(
+  formData: FormData,
+  userId: string
+): Promise<string | null> {
+  const value = (formData.get('projectId') as string | null)?.trim();
+  if (!value) return null;
+  const project = await prisma.project.findFirst({
+    where: { id: value, userId },
+    select: { id: true },
+  });
+  return project?.id ?? null;
+}
+
 export async function createTask(formData: FormData) {
   // 1. Verify the user's identity securely on the server
   const session = await auth();
@@ -37,6 +52,7 @@ export async function createTask(formData: FormData) {
   const durationEstimate = Number(formData.get('durationEstimate'));
   const priority = Number(formData.get('priority'));
   const deadline = await readDeadline(formData);
+  const projectId = await readProjectId(formData, session.user.id);
 
   // 3. Write the new task to PostgreSQL
   await prisma.task.create({
@@ -45,6 +61,7 @@ export async function createTask(formData: FormData) {
       durationEstimate: durationEstimate,
       priority: priority,
       deadline,
+      projectId,
       userId: session.user.id,
     },
   });
@@ -116,6 +133,7 @@ export async function updateTask(formData: FormData) {
   const priority = parseInt(formData.get('priority') as string, 10);
   const deadline = await readDeadline(formData);
   const plannedStart = await readPlannedStart(formData);
+  const projectId = await readProjectId(formData, session.user.id);
 
   await prisma.task.updateMany({
     where: {
@@ -128,6 +146,7 @@ export async function updateTask(formData: FormData) {
       priority,
       deadline,
       plannedStart,
+      projectId,
     },
   });
 

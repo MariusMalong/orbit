@@ -32,6 +32,13 @@
   --warning-bg: #fff4e5;
   --warning-line: #f3c99a;
   --warning-ink: #7a3e00;
+  /* Project colours: stripes and dots, at least 3:1 against the surfaces */
+  --project-teal: #2c7c7b;
+  --project-blue: #3567b0;
+  --project-violet: #7254bd;
+  --project-rose: #b83f64;
+  --project-amber: #a8670f;
+  --project-green: #3b7f36;
 }
 
 /*
@@ -62,6 +69,12 @@
   --warning-bg: #2c2417;
   --warning-line: #5a4522;
   --warning-ink: #f2c98a;
+  --project-teal: #6cc5bf;
+  --project-blue: #8db4ee;
+  --project-violet: #b8a2f0;
+  --project-rose: #f09ab4;
+  --project-amber: #e6b85c;
+  --project-green: #8fd18a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -88,6 +101,12 @@
     --warning-bg: #2c2417;
     --warning-line: #5a4522;
     --warning-ink: #f2c98a;
+    --project-teal: #6cc5bf;
+    --project-blue: #8db4ee;
+    --project-violet: #b8a2f0;
+    --project-rose: #f09ab4;
+    --project-amber: #e6b85c;
+    --project-green: #8fd18a;
   }
 }
 
@@ -114,6 +133,12 @@
   --color-warning-bg: var(--warning-bg);
   --color-warning-line: var(--warning-line);
   --color-warning-ink: var(--warning-ink);
+  --color-project-teal: var(--project-teal);
+  --color-project-blue: var(--project-blue);
+  --color-project-violet: var(--project-violet);
+  --color-project-rose: var(--project-rose);
+  --color-project-amber: var(--project-amber);
+  --color-project-green: var(--project-green);
 }
 
 /* Font families come from next/font CSS variables set on <html> in layout.tsx. */
