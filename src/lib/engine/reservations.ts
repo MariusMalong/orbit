@@ -38,7 +38,8 @@ export function freeMinutes(
 /**
  * How many minutes of each deadline task have to be planned on day
  * `dayIndex` so that every deadline can still be met by the later days.
- * Tasks without a deadline, and tasks that can wait, aren't in the result.
+ * Tasks without a deadline, tasks due after the last day, and tasks that can
+ * wait aren't in the result.
  *
  * `remaining` is each task's unplanned minutes at the start of the day.
  * A non-zero amount is rounded up to `minBlockMinutes` (but never above what's
@@ -52,8 +53,18 @@ export function mustPlanToday(
   commitments: TimeWindow[],
   minBlockMinutes: number
 ): Map<string, number> {
+  // A deadline after the last planned day can't be judged: there's time
+  // after that day that this plan doesn't know about. Such tasks are planned
+  // by priority until their deadline comes within the days.
+  const lastDay = days.at(-1);
   const due = tasks
-    .filter((t) => t.deadline && (remaining.get(t.id) ?? 0) > 0)
+    .filter(
+      (t) =>
+        t.deadline &&
+        lastDay &&
+        t.deadline <= lastDay.urgentUntil &&
+        (remaining.get(t.id) ?? 0) > 0
+    )
     .sort((a, b) => a.deadline!.getTime() - b.deadline!.getTime());
 
   const must = new Map<string, number>();
