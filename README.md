@@ -34,6 +34,8 @@ On its own, rolling forward like that would leave a big task due on Wednesday un
 2. Take the tasks earliest deadline first, and count each one together with everything due before it, so two tasks can't both rely on the same spare hours later in the week. This is the standard feasibility check for earliest-deadline-first scheduling, applied one day at a time.
 3. Plan those must-do pieces first, then fill the rest of the day by priority as usual.
 
+The pages show 7 days, but the plan reaches as far as the latest deadline, up to 8 weeks ahead ([`src/lib/planning/horizon.ts`](src/lib/planning/horizon.ts)), so a big task due in three weeks gets its share of this week when the weeks before its deadline are too full. The Week page says how much time it gets this week.
+
 Work is only pulled forward when it's really needed, so when there's room later, your priorities decide. The Week page compares the plan with one made by priority alone ([`src/lib/engine/changes.ts`](src/lib/engine/changes.ts)) and says what started early for a deadline and what moved later to make room. Deadlines are then checked against when each task actually finishes, so a task that can't make it even when started as early as possible is flagged straight away.
 
 You can also place a task yourself, by dragging it on the timeline or the Week board, or by giving it a start time. Placed tasks are planned first, at their time, around your events, and from then on everything else treats them like an event. A placed task that runs past the end of its day continues on the next working day. When its time has passed, or you choose "Let Orbit plan it", it goes back to being planned automatically.
@@ -45,7 +47,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Sign in with GitHub or Google, or try a demo account with sample data. A new account starts with a short setup: your working hours and days off, and a few first tasks.
 - Add tasks and fixed commitments (events, such as appointments or lectures) from one quick-add bar at the top of the page. Each task has a title, a time estimate, a priority (low, medium or high) and an optional due date and time.
 - Click an upcoming hour or a free slot on the timeline to add an event there, and click any block to edit it, mark it as done or delete it.
-- Drag a task up or down the timeline to a new time, or to another day on the Week page, and the rest of the plan moves around it. With a keyboard or on a touch screen, set a start time in the task's edit dialog instead.
+- Drag a task up or down the timeline to a new time, or to another day on the Week page, and the rest of the plan moves around it. On a touch screen, press and hold the task first; a quick swipe still scrolls. Dragging near the top or bottom of the window scrolls the page. With a keyboard, set a start time in the task's edit dialog instead.
 - Group tasks into projects, each with its own colour. A project's tasks are marked in that colour on the plan, the task list can be filtered by project, and the Week page shows how much time each project gets this week.
 - Make an event repeat every week, such as a lecture or a gym session. Edit or delete just one week of it, or every week at once.
 - Set your working hours for the whole week in one place, and mark days off: nothing gets planned on them, and work moves to the next working day.
@@ -73,14 +75,12 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ## Known limitations
 
-- Deadlines are planned for within the 7-day window. A task due further out is planned by priority until its deadline comes into the window.
+- Deadlines up to 8 weeks ahead are planned for. A task due further out is planned by priority until its deadline is within 8 weeks.
 - Until you change them, every day is a 09:00–17:00 workday, weekends included.
 - Tasks with the same priority (and no deadline today) are planned in the order they were added, newest first, not by length.
 
 ## Next steps
 
-- Plan for deadlines beyond the 7-day window.
-- Drag tasks on touch screens, with a long press.
 - Saved schedules. The `Schedule` and `ScheduleBlock` models are already in the schema but aren't used yet.
 
 ## Tech stack
