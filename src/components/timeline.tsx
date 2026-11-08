@@ -12,6 +12,7 @@ import { AddEventButton } from '@/components/quick-add';
 import type { EventOccurrence } from '@/lib/planning/recurrence';
 import { RepeatIcon } from '@/components/repeat-icon';
 import { TimelineDraggable } from '@/components/draggable-task';
+import { blockStripe, type ProjectInfo } from '@/lib/projects';
 
 interface TimelineProps {
   scheduledBlocks: ScheduleBlockResult[];
@@ -24,6 +25,7 @@ interface TimelineProps {
   planStart: Date; // Where the engine started planning: now, or the start of the workday
   timeZone: string; // Visitor's timezone, for hour labels and times
   headerAction?: React.ReactNode;
+  projectOf?: Record<string, ProjectInfo>; // Each task's project, by task id
 }
 
 // Vertical scale of the calendar grid.
@@ -45,6 +47,7 @@ export function Timeline({
   planStart,
   timeZone,
   headerAction,
+  projectOf = {},
 }: TimelineProps) {
   // Quick lookup map to resolve task titles and priorities by ID
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
@@ -131,7 +134,8 @@ export function Timeline({
               ? `Planned from ${formatClock(planStart, timeZone)}. `
               : ''}
             Click an hour or a free slot to add an event, or a block to change
-            it. Drag a task to move it.
+            it. Drag a task to move it (on a touch screen, press and hold it
+            first).
           </p>
         </div>
         <div className="shrink-0">{headerAction}</div>
@@ -265,6 +269,7 @@ export function Timeline({
           const priority = PRIORITY_LABELS[task.priority] ?? '';
 
           const placed = task.plannedStart ? ' · Your time' : '';
+          const project = projectOf[task.id];
 
           return (
             <TimelineDraggable
@@ -279,15 +284,19 @@ export function Timeline({
               style={{ top, height }}
             >
               <TaskMenu
-                task={{ ...task, deadline: task.deadline ?? null }}
+                task={{
+                  ...task,
+                  deadline: task.deadline ?? null,
+                  projectId: project?.id ?? null,
+                }}
                 heading={
                   <MenuHeading
                     title={task.title}
-                    detail={`${time} · ${minutes} min${placed}`}
+                    detail={`${time} · ${minutes} min${placed}${project ? ` · ${project.name}` : ''}`}
                   />
                 }
                 className="relative h-full"
-                triggerClassName={`flex h-full w-full cursor-pointer items-start justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 text-left shadow-[inset_3px_0_0_var(--color-accent-edge)] transition hover:brightness-[0.97] focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${isCompact ? 'py-1' : 'py-2.5'}`}
+                triggerClassName={`flex h-full w-full cursor-pointer items-start justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 text-left ${blockStripe(project?.color)} transition hover:brightness-[0.97] focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${isCompact ? 'py-1' : 'py-2.5'}`}
                 trigger={
                   <>
                     <span className="min-w-0">

@@ -188,3 +188,17 @@ describe('buildDemoData events', () => {
     ).toEqual(['Team check-in']);
   });
 });
+
+describe('demo projects', () => {
+  it('gives tasks only projects that exist, and uses each project', () => {
+    const data = buildDemoData(new Date('2026-11-05T10:20:00Z'), 'UTC');
+    const keys = data.projects.map((p) => p.key);
+    expect(new Set(keys).size).toBe(keys.length);
+    for (const task of data.tasks) {
+      if (task.project) expect(keys).toContain(task.project);
+    }
+    for (const key of keys) {
+      expect(data.tasks.some((t) => t.project === key)).toBe(true);
+    }
+  });
+});

@@ -1,5 +1,6 @@
 'use client';
 
+import { ProjectSelect } from '@/components/projects-context';
 import { useEffect, useRef, useState } from 'react';
 import { createTask } from '@/app/actions/task';
 import { addCommitment } from '@/app/actions/commitments';
@@ -180,6 +181,8 @@ export function QuickAdd({ today }: QuickAddProps) {
               <option value="2">Medium priority</option>
               <option value="3">High priority</option>
             </select>
+
+            <ProjectSelect id="quick-add-project" hideLabel className={chip} />
 
             {showDue ? (
               <>

@@ -1,4 +1,10 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import {
+  expect,
+  test,
+  type CDPSession,
+  type Locator,
+  type Page,
+} from '@playwright/test';
 import { deleteUser, prisma, signInAsNewUser } from './db';
 
 // Dragging a task to a new time on Today, or another day on the Week board,
@@ -130,4 +136,71 @@ test('dragging a task on the Week board moves it to another day, but not to a da
   await expect(task(2)).toContainText('Your time');
   await expect(task(0)).toHaveCount(0);
   expect(minutesOfDay((await task(2).textContent())!)).toBe(time);
+});
+
+test.describe('on a touch screen', () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+
+  /** A finger on `item` that waits `holdMs`, then slides down by `dy`. */
+  async function touchDrag(
+    page: Page,
+    item: Locator,
+    holdMs: number,
+    dy: number
+  ) {
+    const cdp: CDPSession = await page.context().newCDPSession(page);
+    const box = (await item.boundingBox())!;
+    const x = Math.round(box.x + box.width / 2);
+    const y = Math.round(box.y + Math.min(box.height / 2, 12));
+    const touch = (
+      type: 'touchStart' | 'touchMove' | 'touchEnd',
+      points: { x: number; y: number }[]
+    ) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+
+    await touch('touchStart', [{ x, y }]);
+    await page.waitForTimeout(holdMs);
+    for (let step = 1; step <= 10; step++) {
+      await touch('touchMove', [{ x, y: y + (dy * step) / 10 }]);
+    }
+    await touch('touchEnd', []);
+    await cdp.detach();
+  }
+
+  test('press and hold, then drag, moves a task', async ({ page, baseURL }) => {
+    await signInWithOneTask(page, baseURL!);
+    await page.goto('/');
+
+    const plan = page.getByRole('region', { name: "Today's plan" });
+    const block = plan.getByRole('button', { name: /^Write report/ });
+    await block.scrollIntoViewIfNeeded();
+    const before = minutesOfDay((await block.textContent())!);
+
+    await touchDrag(page, block, 600, 128); // Two hours down
+    await expect(block).toContainText('Your time');
+    const after = minutesOfDay((await block.textContent())!);
+    expect(after - before).toBeGreaterThanOrEqual(105);
+    expect(after - before).toBeLessThanOrEqual(135);
+  });
+
+  test('a quick swipe scrolls instead of moving the task', async ({
+    page,
+    baseURL,
+  }) => {
+    await signInWithOneTask(page, baseURL!);
+    await page.goto('/');
+
+    const plan = page.getByRole('region', { name: "Today's plan" });
+    const block = plan.getByRole('button', { name: /^Write report/ });
+    await block.scrollIntoViewIfNeeded();
+
+    await touchDrag(page, block, 0, 128);
+    await page.waitForLoadState('networkidle');
+    const saved = await prisma.task.findFirstOrThrow({ where: { userId } });
+    expect(saved.plannedStart).toBeNull();
+    await expect(block).not.toContainText('Your time');
+  });
 });

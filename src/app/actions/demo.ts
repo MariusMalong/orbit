@@ -58,10 +58,13 @@ export async function startDemo() {
     redirect('/signin?demo=limited');
   }
 
-  const { availability, tasks, commitments } = buildDemoData(
+  const { availability, projects, tasks, commitments } = buildDemoData(
     now,
     await getUserTimeZone()
   );
+  // Projects are created first, with ids chosen here, so the tasks can
+  // point at them in the same create.
+  const projectIds = new Map(projects.map((p) => [p.key, randomUUID()]));
   const sessionToken = randomBytes(32).toString('hex');
   const expires = new Date(now.getTime() + DEMO_LIFETIME_MS);
 
@@ -74,9 +77,17 @@ export async function startDemo() {
       demoIpHash: ipHash,
       availabilities: { create: availability },
       commitments: { create: commitments },
+      projects: {
+        create: projects.map(({ key, name, color }) => ({
+          id: projectIds.get(key),
+          name,
+          color,
+        })),
+      },
       tasks: {
-        create: tasks.map(({ timeEntries, ...task }) => ({
+        create: tasks.map(({ timeEntries, project, ...task }) => ({
           ...task,
+          projectId: project ? projectIds.get(project) : null,
           timeEntries: { create: timeEntries },
         })),
       },
