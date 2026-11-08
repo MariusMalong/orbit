@@ -1,4 +1,5 @@
 import { getZonedParts, zonedWallTimeToDate } from '@/lib/time/zoned';
+import type { ProjectColor } from '@/lib/projects';
 
 // Sample data for "Try the demo" accounts.
 //
@@ -21,8 +22,15 @@ export type DemoTimeEntry = {
   duration: number; // In minutes
 };
 
+export type DemoProject = {
+  key: string; // Tasks refer to their project by this
+  name: string;
+  color: ProjectColor;
+};
+
 export type DemoTask = {
   title: string;
+  project: string | null; // A DemoProject key
   priority: number; // 3 = High, 1 = Low
   durationEstimate: number; // Minutes still to do, like a real task after focus time is logged
   status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED';
@@ -47,6 +55,7 @@ export type DemoAvailability = {
 
 export type DemoData = {
   availability: DemoAvailability[]; // Today's hours first, then the weekend off
+  projects: DemoProject[];
   tasks: DemoTask[];
   commitments: DemoCommitment[];
 };
@@ -112,10 +121,16 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
     { title: 'Dentist appointment', startTime: at(390), endTime: at(450) },
   ];
 
+  const projects: DemoProject[] = [
+    { key: 'work', name: 'Work', color: 'teal' },
+    { key: 'personal', name: 'Personal', color: 'violet' },
+  ];
+
   const tasks: DemoTask[] = [
     {
       // Started earlier: 75 of 150 minutes already logged with the focus timer.
       title: 'Finish the quarterly report',
+      project: 'work',
       priority: 3,
       durationEstimate: 75,
       status: 'IN_PROGRESS',
@@ -125,6 +140,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
     },
     {
       title: "Prepare slides for Thursday's review",
+      project: 'work',
       priority: 3,
       durationEstimate: 90,
       status: 'TODO',
@@ -134,6 +150,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
     },
     {
       title: "Plan next week's budget",
+      project: 'work',
       priority: 2,
       durationEstimate: 60,
       status: 'TODO',
@@ -145,6 +162,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       // Medium priority, but due before the coffee meeting: the engine plans
       // it ahead of the high-priority tasks and it still finishes on time.
       title: 'Reply to supplier emails',
+      project: 'work',
       priority: 2,
       durationEstimate: 30,
       status: 'TODO',
@@ -154,6 +172,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
     },
     {
       title: 'Book flights for the conference',
+      project: 'personal',
       priority: 1,
       durationEstimate: 20,
       status: 'TODO',
@@ -163,6 +182,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
     },
     {
       title: 'Read the onboarding guide',
+      project: 'work',
       priority: 1,
       durationEstimate: 45,
       status: 'TODO',
@@ -176,6 +196,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
       // for it today and 8 hours tomorrow, so at least 75 minutes remain on
       // the due day: it can't finish before 10:15.)
       title: 'Submit the grant application',
+      project: 'work',
       priority: 1,
       durationEstimate: 600,
       status: 'TODO',
@@ -186,6 +207,7 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
     {
       // Just finished, so the daily summary isn't empty.
       title: 'Pay the electricity bill',
+      project: 'personal',
       priority: 2,
       durationEstimate: 0,
       status: 'COMPLETED',
@@ -195,5 +217,5 @@ export function buildDemoData(now: Date, timeZone: string): DemoData {
     },
   ];
 
-  return { availability, tasks, commitments };
+  return { availability, projects, tasks, commitments };
 }
