@@ -8,10 +8,17 @@ import { completeWeek } from '@/lib/planning/weekly-hours';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
 import { startOfZonedDay } from '@/lib/time/zoned';
 import { expandEvents, type EventOccurrence } from '@/lib/planning/recurrence';
+import {
+  changesForShownDays,
+  planForShownDays,
+  planningDayCount,
+  SHOWN_DAYS,
+} from '@/lib/planning/horizon';
 
 /**
  * Everything the Today and Week pages need to draw the plan: the user's open
- * tasks, events and working hours, and the engine's plan for the next 7 days.
+ * tasks, events and working hours, and the engine's plan for the next 7 days
+ * (made over a longer horizon when a deadline is further out).
  *
  * Every query is scoped to `userId`, which must come from the server-side
  * session. Both pages use this, so they always show the same plan.
@@ -51,7 +58,6 @@ export async function loadPlan(userId: string) {
       { startTime: a.startTime, endTime: a.endTime, isDayOff: a.isDayOff },
     ])
   );
-  const days = buildPlanningDays(now, timeZone, weeklyHours);
 
   // Map Prisma rows to the engine's types.
   const tasks: SchedulableTask[] = rawTasks.map((t) => ({
@@ -62,6 +68,16 @@ export async function loadPlan(userId: string) {
     deadline: t.deadline,
     plannedStart: t.plannedStart,
   }));
+
+  // The days on screen, and the days planned: up to the latest deadline, so
+  // work due in a few weeks gets started in time.
+  const planningDays = buildPlanningDays(
+    now,
+    timeZone,
+    weeklyHours,
+    planningDayCount(tasks, startOfToday)
+  );
+  const days = planningDays.slice(0, SHOWN_DAYS);
   // Events this week, with each weekly event expanded into its occurrences,
   // followed by one-off events further ahead (for "Later" under Coming up).
   const weekEnd = days[days.length - 1].urgentUntil;
@@ -78,21 +94,30 @@ export async function loadPlan(userId: string) {
         repeatsWeekly: false,
       })),
   ];
-  const busy: TimeWindow[] = commitments.map((c) => ({
-    start: c.start,
-    end: c.end,
-  }));
+  // Everything that blocks time over the whole planning horizon.
+  const planningEnd = planningDays[planningDays.length - 1].urgentUntil;
+  const busy: TimeWindow[] = expandEvents(
+    rawCommitments,
+    startOfToday,
+    planningEnd,
+    timeZone
+  ).map((c) => ({ start: c.start, end: c.end }));
 
   // Today is planned from now (time that has passed can't be planned);
   // whatever doesn't fit rolls into the following days, and deadlines are
   // checked against when each task will actually finish.
-  const plan = generateMultiDaySchedule(tasks, busy, days);
-  // The same week planned by priority alone, to show what planning around
+  const fullPlan = generateMultiDaySchedule(tasks, busy, planningDays);
+  // The same days planned by priority alone, to show what planning around
   // deadlines changed (what started early, and what moved later for it).
-  const changes = deadlineChanges(
-    plan,
-    generateMultiDaySchedule(tasks, busy, days, { planForDeadlines: false })
+  const changes = changesForShownDays(
+    deadlineChanges(
+      fullPlan,
+      generateMultiDaySchedule(tasks, busy, planningDays, {
+        planForDeadlines: false,
+      })
+    )
   );
+  const plan = planForShownDays(fullPlan, tasks, weekEnd);
 
   // How full each day is.
   const loads = dayLoads(

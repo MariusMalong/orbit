@@ -5,7 +5,12 @@ import { QuickAdd } from '@/components/quick-add';
 import { WeekBoard } from '@/components/week-board';
 import { WorkingHours } from '@/components/working-hours';
 import { buttonSecondary } from '@/components/ui-classes';
-import { formatDayRange, formatDue, formatShortDay } from '@/lib/format';
+import {
+  formatDayRange,
+  formatDue,
+  formatMinutes,
+  formatShortDay,
+} from '@/lib/format';
 import { loadPlan } from '@/lib/planning/load-plan';
 import type { SchedulableTask } from '@/lib/engine/scheduler';
 import { toDateKey } from '@/lib/time/clock';
@@ -65,6 +70,16 @@ export default async function WeekPage() {
       : index === 1
         ? 'tomorrow'
         : formatShortDay(days[index].date, timeZone);
+  const weekEnd = lastDay.urgentUntil;
+  const minutesThisWeek = (taskId: string) =>
+    plan.scheduledBlocks
+      .filter((b) => b.taskId === taskId)
+      .reduce(
+        (sum, b) =>
+          sum +
+          Math.round((b.endTime.getTime() - b.startTime.getTime()) / 60_000),
+        0
+      );
   const titleOf = (id: string) => tasks.find((t) => t.id === id)?.title ?? '';
 
   return (
@@ -111,16 +126,19 @@ export default async function WeekPage() {
           <ul className="mt-1 flex flex-col gap-0.5 text-ink-2">
             {changes.startedEarly.map(({ taskId, firstDayIndex }) => {
               const deadline = tasks.find((t) => t.id === taskId)?.deadline;
+              const due = deadline
+                ? formatDue(deadline, now, timeZone).replace(/^Due /, '')
+                : 'its deadline';
+              // Due after this week: say how much of it has to happen now.
+              const dueLater = !!deadline && deadline >= weekEnd;
               return (
                 <li key={taskId}>
                   <strong className="font-medium text-ink">
                     {titleOf(taskId)}
                   </strong>{' '}
-                  starts {dayName(firstDayIndex)}, so it&apos;s done by{' '}
-                  {deadline
-                    ? formatDue(deadline, now, timeZone).replace(/^Due /, '')
-                    : 'its deadline'}
-                  .
+                  {dueLater
+                    ? `gets ${formatMinutes(minutesThisWeek(taskId))} this week, starting ${dayName(firstDayIndex)}, so it's done by ${due}.`
+                    : `starts ${dayName(firstDayIndex)}, so it's done by ${due}.`}
                 </li>
               );
             })}
@@ -131,7 +149,7 @@ export default async function WeekPage() {
                   {titleOf(taskId)}
                 </strong>{' '}
                 {toDayIndex === null
-                  ? `no longer fits this week (it would have finished ${dayName(fromDayIndex)}).`
+                  ? `now finishes after this week instead of ${dayName(fromDayIndex)}.`
                   : `now finishes ${dayName(toDayIndex)} instead of ${dayName(fromDayIndex)}.`}
               </li>
             ))}

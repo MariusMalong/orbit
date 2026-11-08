@@ -38,6 +38,21 @@ describe('freeMinutes', () => {
 describe('mustPlanToday', () => {
   const days = [workday(5), workday(6), workday(7)];
 
+  it('leaves a task due after the last day to its priority', () => {
+    // 30 hours due on the 9th would need time today if the 7th were the end
+    // of the world, but there are working days after it the plan can't see.
+    const big = task('big', 1800, on(9, '17:00'));
+    const must = mustPlanToday(
+      [big],
+      new Map([['big', 1800]]),
+      days,
+      0,
+      [],
+      15
+    );
+    expect(must.size).toBe(0);
+  });
+
   it('asks for nothing when later days have room', () => {
     const tasks = [task('report', 300, on(7, '17:00'))];
     const must = mustPlanToday(
