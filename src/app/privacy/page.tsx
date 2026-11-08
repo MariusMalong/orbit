@@ -6,7 +6,7 @@ export const metadata: Metadata = {
 };
 
 const CONTACT_EMAIL = 'mariusmalong@gmail.com';
-const LAST_UPDATED = '7 November 2026';
+const LAST_UPDATED = '8 November 2026';
 
 // Public: Google's OAuth consent screen links here, so it must load without
 // signing in. Keep it in step with what the app actually stores (see
@@ -96,7 +96,9 @@ export default function PrivacyPage() {
       </section>
 
       <section aria-labelledby="keep">
-        <h2 id="keep">How long it&apos;s kept, and deleting it</h2>
+        <h2 id="keep">
+          How long it&apos;s kept, getting a copy, and deleting it
+        </h2>
         <p>
           Your data is kept until you delete your account. You can do that
           yourself at any time from the{' '}
@@ -104,6 +106,10 @@ export default function PrivacyPage() {
           of the page): everything is deleted straight away, and nothing is
           kept. Demo accounts and everything in them are deleted automatically
           after 24 hours.
+        </p>
+        <p>
+          The Account page also has a <strong>Download my data</strong> button,
+          which gives you a copy of everything you&apos;ve added as a JSON file.
         </p>
         <p>
           You can also disconnect Orbit from your GitHub or Google account in
