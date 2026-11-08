@@ -37,6 +37,15 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectAccessible(page);
     });
 
+    test('projects dialog', async ({ page }) => {
+      await startDemo(page);
+      await page.getByRole('button', { name: 'Projects', exact: true }).click();
+      await expect(
+        page.getByRole('dialog', { name: 'Projects' })
+      ).toBeVisible();
+      await expectAccessible(page);
+    });
+
     test('privacy policy', async ({ page }) => {
       await page.goto('/privacy');
       await expectAccessible(page);

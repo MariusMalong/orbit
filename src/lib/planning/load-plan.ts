@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { parseProjectColor, type ProjectInfo } from '@/lib/projects';
 import type { SchedulableTask, TimeWindow } from '@/lib/engine/scheduler';
 import { generateMultiDaySchedule } from '@/lib/engine/multi-day';
 import { deadlineChanges } from '@/lib/engine/changes';
@@ -23,24 +24,42 @@ export async function loadPlan(userId: string) {
   const now = new Date();
   const startOfToday = startOfZonedDay(now, timeZone);
 
-  const [rawTasks, rawCommitments, availability] = await Promise.all([
-    // IN_PROGRESS tasks (partially worked via the focus timer) still have
-    // time left, so they're planned alongside untouched TODO tasks.
-    prisma.task.findMany({
-      where: { userId, status: { in: ['TODO', 'IN_PROGRESS'] } },
-      orderBy: { createdAt: 'desc' },
-    }),
-    // Weekly events (which may have started long ago) and events that
-    // haven't ended yet. Past one-off events aren't shown anywhere.
-    prisma.fixedCommitment.findMany({
-      where: {
-        userId,
-        OR: [{ repeatsWeekly: true }, { endTime: { gt: startOfToday } }],
-      },
-      orderBy: { startTime: 'asc' },
-    }),
-    prisma.availability.findMany({ where: { userId } }),
-  ]);
+  const [rawTasks, rawCommitments, availability, rawProjects] =
+    await Promise.all([
+      // IN_PROGRESS tasks (partially worked via the focus timer) still have
+      // time left, so they're planned alongside untouched TODO tasks.
+      prisma.task.findMany({
+        where: { userId, status: { in: ['TODO', 'IN_PROGRESS'] } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      // Weekly events (which may have started long ago) and events that
+      // haven't ended yet. Past one-off events aren't shown anywhere.
+      prisma.fixedCommitment.findMany({
+        where: {
+          userId,
+          OR: [{ repeatsWeekly: true }, { endTime: { gt: startOfToday } }],
+        },
+        orderBy: { startTime: 'asc' },
+      }),
+      prisma.availability.findMany({ where: { userId } }),
+      prisma.project.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
+
+  const projects: ProjectInfo[] = rawProjects.map((p) => ({
+    id: p.id,
+    name: p.name,
+    color: parseProjectColor(p.color),
+  }));
+  // Each task's project, by task id, for drawing it in that colour.
+  const projectById = new Map(projects.map((p) => [p.id, p]));
+  const projectOf: Record<string, ProjectInfo> = {};
+  for (const t of rawTasks) {
+    const project = t.projectId ? projectById.get(t.projectId) : undefined;
+    if (project) projectOf[t.id] = project;
+  }
 
   // Working hours and days off for each day of the week (missing days are
   // 09:00 - 17:00 workdays), turned into the next 7 planning days in the
@@ -116,5 +135,7 @@ export async function loadPlan(userId: string) {
     plan,
     changes,
     loads,
+    projects,
+    projectOf,
   };
 }

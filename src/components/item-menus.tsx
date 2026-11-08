@@ -30,6 +30,7 @@ interface TaskMenuProps extends MenuLayout {
     priority: number;
     deadline: Date | null;
     plannedStart?: Date | null; // Set when the user placed it at a time
+    projectId?: string | null;
   };
 }
 

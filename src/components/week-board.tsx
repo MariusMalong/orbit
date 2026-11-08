@@ -7,6 +7,7 @@ import { EventMenu, MenuHeading, TaskMenu } from '@/components/item-menus';
 import type { EventOccurrence } from '@/lib/planning/recurrence';
 import { RepeatIcon } from '@/components/repeat-icon';
 import { WeekDraggable } from '@/components/draggable-task';
+import { blockStripe, type ProjectInfo } from '@/lib/projects';
 
 interface WeekBoardProps {
   days: PlanningDayInfo[]; // Today first
@@ -15,6 +16,7 @@ interface WeekBoardProps {
   tasks: SchedulableTask[];
   events: EventOccurrence[];
   lateTaskIds: string[];
+  projectOf?: Record<string, ProjectInfo>; // Each task's project, by task id
   timeZone: string;
 }
 
@@ -39,6 +41,7 @@ export function WeekBoard({
   events,
   lateTaskIds,
   timeZone,
+  projectOf = {},
 }: WeekBoardProps) {
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const late = new Set(lateTaskIds);
@@ -172,6 +175,7 @@ export function WeekBoard({
                   }
 
                   const { task } = item;
+                  const project = projectOf[task.id];
                   const isLate = late.has(task.id);
                   return (
                     <li key={`task-${task.id}-${item.start.getTime()}`}>
@@ -183,15 +187,19 @@ export function WeekBoard({
                         timeZone={timeZone}
                       >
                         <TaskMenu
-                          task={{ ...task, deadline: task.deadline ?? null }}
+                          task={{
+                            ...task,
+                            deadline: task.deadline ?? null,
+                            projectId: project?.id ?? null,
+                          }}
                           heading={
                             <MenuHeading
                               title={task.title}
-                              detail={`${formatShortDay(item.start, timeZone)}, ${time}`}
+                              detail={`${formatShortDay(item.start, timeZone)}, ${time}${project ? ` · ${project.name}` : ''}`}
                             />
                           }
                           panelClassName={panelSide}
-                          triggerClassName={`${itemClass} bg-accent-tint shadow-[inset_3px_0_0_var(--color-accent-edge)] hover:brightness-[0.97]`}
+                          triggerClassName={`${itemClass} bg-accent-tint ${blockStripe(project?.color)} hover:brightness-[0.97]`}
                           trigger={
                             <>
                               <span className="block text-[11px] text-ink-2 tabular-nums">

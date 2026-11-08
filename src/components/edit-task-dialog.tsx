@@ -3,6 +3,7 @@
 import { Dialog } from '@/components/dialog';
 import { updateTask } from '@/app/actions/task';
 import { formatForDateTimeInput } from '@/lib/format';
+import { ProjectSelect } from '@/components/projects-context';
 import {
   buttonPrimary,
   buttonSecondary,
@@ -20,6 +21,7 @@ interface EditTaskProps {
     priority: number;
     deadline: Date | null;
     plannedStart?: Date | null;
+    projectId?: string | null;
   };
 }
 
@@ -87,6 +89,13 @@ export function EditTaskDialog({ task, open, onClose }: EditTaskProps) {
             </select>
           </label>
         </div>
+
+        <ProjectSelect
+          id={`edit-task-project-${task.id}`}
+          defaultValue={task.projectId}
+          labelClassName={fieldLabel}
+          className={fieldInput}
+        />
 
         <label htmlFor={`edit-task-deadline-${task.id}`} className={fieldLabel}>
           <span>
