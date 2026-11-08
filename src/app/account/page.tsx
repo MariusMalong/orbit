@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { DeleteAccount } from '@/components/delete-account';
-import { panel, panelTitle } from '@/components/ui-classes';
+import { buttonSecondary, panel, panelTitle } from '@/components/ui-classes';
 
 export const metadata: Metadata = {
   title: 'Account | Orbit',
@@ -57,6 +57,26 @@ export default async function AccountPage() {
               : providers.join(' and ') || '—'}
           </dd>
         </dl>
+      </section>
+
+      <section
+        aria-labelledby="export-heading"
+        className={`${panel} flex flex-col gap-3`}
+      >
+        <h2 id="export-heading" className={panelTitle}>
+          Your data
+        </h2>
+        <p className="text-sm text-ink-2">
+          Download everything you&apos;ve put into Orbit as a JSON file: your
+          tasks and the time logged on them, events, projects and working hours.
+        </p>
+        <a
+          href="/account/export"
+          download
+          className={`${buttonSecondary} self-start`}
+        >
+          Download my data
+        </a>
       </section>
 
       <section
