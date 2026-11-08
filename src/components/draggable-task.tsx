@@ -14,28 +14,51 @@ import { movedStart, startOnDay } from '@/lib/planning/move';
 // Dragging a planned task to a new time (Today timeline) or day (Week board).
 // Dropping it places the task there, and the plan is redrawn around it.
 //
-// Dragging works with a mouse or pen. On touch screens a drag would fight
-// with scrolling, so there (and from the keyboard) the task's edit dialog
-// has a "Start at" field instead. A press that doesn't move is an ordinary
-// click, so the task's menu still opens.
+// With a mouse or pen, a drag starts once the pointer moves a few pixels. On
+// a touch screen a drag would fight with scrolling, so it starts with a press
+// and hold: a finger that moves before then is scrolling the page. A press
+// that never becomes a drag is an ordinary click or tap, so the task's menu
+// still opens. From the keyboard, the edit dialog's "Start at" field does
+// the same job.
+//
+// Near the top or bottom of the window the page scrolls, so a task can be
+// dragged to a day that's off screen (the Week board is a long list on a
+// phone).
 
 const DRAG_THRESHOLD_PX = 5;
+const LONG_PRESS_MS = 400;
+const TOUCH_SLOP_PX = 8; // A finger moving more than this before the hold is scrolling
+const EDGE_PX = 64; // How close to the window's edge auto-scrolling starts
+const MAX_SCROLL_PX = 14; // Per frame, right at the edge
 
 type Offset = { x: number; y: number };
+/** Where the pointer is, in the window. */
+export type Point = { clientX: number; clientY: number };
 
 interface DragOptions {
   axis: 'y' | 'both';
-  /** Called as the pointer moves, with how far it has moved. */
-  onMove?: (offset: Offset, event: PointerEvent) => void;
+  /** Called as the pointer moves, with how far the task has moved. */
+  onMove?: (offset: Offset, point: Point) => void;
   /** Called on release: the new start to place the task at, or null to cancel. */
-  onDrop: (offset: Offset, event: PointerEvent) => Date | null;
+  onDrop: (offset: Offset, point: Point) => Date | null;
   onEnd?: () => void;
   taskId: string;
+  /** The task's wrapper element. */
+  ref: React.RefObject<HTMLDivElement | null>;
 }
 
-function useDragToPlace({ axis, onMove, onDrop, onEnd, taskId }: DragOptions) {
+function useDragToPlace({
+  axis,
+  onMove,
+  onDrop,
+  onEnd,
+  taskId,
+  ref,
+}: DragOptions) {
   const [offset, setOffset] = useState<Offset | null>(null);
+  const [isLifted, setIsLifted] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const dragging = useRef(false);
   const suppressClick = useRef(false);
   const cleanup = useRef<() => void>(() => {});
 
@@ -47,38 +70,110 @@ function useDragToPlace({ axis, onMove, onDrop, onEnd, taskId }: DragOptions) {
     wasPending.current = isPending;
   }, [isPending]);
 
+  // While a touch drag is on, the page mustn't scroll under the finger. React
+  // registers touch listeners as passive, which can't prevent that, so this
+  // one is added by hand.
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const holdStill = (event: TouchEvent) => {
+      if (dragging.current) event.preventDefault();
+    };
+    element.addEventListener('touchmove', holdStill, { passive: false });
+    return () => element.removeEventListener('touchmove', holdStill);
+  }, [ref]);
+
   useEffect(() => () => cleanup.current(), []);
 
   const onPointerDown = (down: React.PointerEvent) => {
-    if (down.button !== 0 || down.pointerType === 'touch' || isPending) return;
-    const origin = { x: down.clientX, y: down.clientY };
-    let dragging = false;
+    if (isPending) return;
+    const isTouch = down.pointerType === 'touch';
+    if (!isTouch && down.button !== 0) return;
 
-    const offsetOf = (event: PointerEvent) => ({
-      x: axis === 'y' ? 0 : event.clientX - origin.x,
-      y: event.clientY - origin.y,
+    const origin = {
+      x: down.clientX,
+      y: down.clientY,
+      scrollY: window.scrollY,
+    };
+    let point: Point = { clientX: down.clientX, clientY: down.clientY };
+    let held = !isTouch; // A mouse can drag straight away; a finger after holding
+    let frame = 0;
+
+    const offsetOf = (): Offset => ({
+      x: axis === 'y' ? 0 : point.clientX - origin.x,
+      // Scrolling moves the page under the pointer, so it counts too.
+      y: point.clientY - origin.y + window.scrollY - origin.scrollY,
     });
+    const update = () => {
+      const next = offsetOf();
+      setOffset(next);
+      onMove?.(next, point);
+    };
+
+    const autoScroll = () => {
+      const fromBottom = window.innerHeight - point.clientY;
+      const speed = (distance: number) =>
+        Math.ceil(((EDGE_PX - distance) / EDGE_PX) * MAX_SCROLL_PX);
+      const dy =
+        point.clientY < EDGE_PX
+          ? -speed(point.clientY)
+          : fromBottom < EDGE_PX
+            ? speed(fromBottom)
+            : 0;
+      if (dy !== 0) {
+        window.scrollBy(0, dy);
+        update();
+      }
+      frame = requestAnimationFrame(autoScroll);
+    };
+
+    const startDrag = () => {
+      dragging.current = true;
+      setIsLifted(true);
+      document.body.style.userSelect = 'none';
+      update();
+      frame = requestAnimationFrame(autoScroll);
+    };
+
+    // A finger that stays put for a moment picks the task up.
+    const holdTimer = isTouch
+      ? setTimeout(() => {
+          held = true;
+          navigator.vibrate?.(10);
+          startDrag();
+        }, LONG_PRESS_MS)
+      : undefined;
 
     const move = (event: PointerEvent) => {
-      const next = offsetOf(event);
-      if (!dragging) {
-        if (Math.hypot(next.x, next.y) < DRAG_THRESHOLD_PX) return;
-        dragging = true;
-        document.body.style.userSelect = 'none';
+      if (event.pointerId !== down.pointerId) return;
+      point = { clientX: event.clientX, clientY: event.clientY };
+      if (dragging.current) {
+        update();
+        return;
       }
-      setOffset(next);
-      onMove?.(next, event);
+      const distance = Math.hypot(
+        point.clientX - origin.x,
+        point.clientY - origin.y
+      );
+      if (!held) {
+        // Moved before the hold: the finger is scrolling, not dragging.
+        if (distance > TOUCH_SLOP_PX) stop();
+        return;
+      }
+      if (distance >= DRAG_THRESHOLD_PX) startDrag();
     };
 
     const finish = (event: PointerEvent | null) => {
+      if (event && event.pointerId !== down.pointerId) return;
+      const wasDragging = dragging.current;
       stop();
-      if (!dragging) return;
+      if (!wasDragging) return;
       // The click that follows the release isn't a click on the task.
       suppressClick.current = true;
       setTimeout(() => (suppressClick.current = false), 0);
       onEnd?.();
 
-      const start = event ? onDrop(offsetOf(event), event) : null;
+      const start = event ? onDrop(offsetOf(), point) : null;
       if (!start) {
         setOffset(null);
         return;
@@ -92,23 +187,33 @@ function useDragToPlace({ axis, onMove, onDrop, onEnd, taskId }: DragOptions) {
     };
 
     const up = (event: PointerEvent) => finish(event);
+    const cancel = () => finish(null);
     const key = (event: KeyboardEvent) => {
       if (event.key === 'Escape') finish(null);
     };
-    const stop = () => {
+    // A long press would otherwise open the browser's own menu.
+    const contextMenu = (event: Event) => {
+      if (isTouch) event.preventDefault();
+    };
+    function stop() {
+      clearTimeout(holdTimer);
+      cancelAnimationFrame(frame);
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', cancel);
       window.removeEventListener('keydown', key);
+      window.removeEventListener('contextmenu', contextMenu);
       document.body.style.userSelect = '';
+      dragging.current = false;
+      setIsLifted(false);
       cleanup.current = () => {};
-    };
-    const cancel = () => finish(null);
+    }
 
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', cancel);
     window.addEventListener('keydown', key);
+    window.addEventListener('contextmenu', contextMenu);
     cleanup.current = stop;
   };
 
@@ -119,7 +224,7 @@ function useDragToPlace({ axis, onMove, onDrop, onEnd, taskId }: DragOptions) {
     }
   };
 
-  const isDragging = offset !== null && !isPending;
+  const isDragging = isLifted && !isPending;
   const style: React.CSSProperties | undefined = offset
     ? {
         transform: `translate(${offset.x}px, ${offset.y}px)`,
@@ -132,8 +237,11 @@ function useDragToPlace({ axis, onMove, onDrop, onEnd, taskId }: DragOptions) {
   return { onPointerDown, onClickCapture, style, isDragging, isPending };
 }
 
+// No text selection or the iOS callout on a long press.
+const touchClasses = 'select-none [-webkit-touch-callout:none]';
+
 const dragClasses = (isDragging: boolean, isPending: boolean) =>
-  `${isDragging ? 'cursor-grabbing opacity-90 shadow-lg' : ''} ${isPending ? 'opacity-70' : ''}`;
+  `${touchClasses} ${isDragging ? 'cursor-grabbing opacity-90 shadow-lg' : ''} ${isPending ? 'opacity-70' : ''}`;
 
 interface TimelineDragProps {
   taskId: string;
@@ -163,9 +271,11 @@ export function TimelineDraggable({
   const target = (offset: Offset) =>
     movedStart(start, offset.y / pxPerMinute, earliest, latest);
 
+  const ref = useRef<HTMLDivElement>(null);
   const drag = useDragToPlace({
     axis: 'y',
     taskId,
+    ref,
     onMove: (offset) => setPreview(formatClock(target(offset), timeZone)),
     onDrop: (offset) => {
       const next = target(offset);
@@ -178,6 +288,7 @@ export function TimelineDraggable({
     <div
       className={`${className} ${dragClasses(drag.isDragging, drag.isPending)}`}
       style={{ ...style, ...drag.style }}
+      ref={ref}
       onPointerDown={drag.onPointerDown}
       onClickCapture={drag.onClickCapture}
     >
@@ -207,10 +318,10 @@ const DAY_SELECTOR = '[data-day-index]';
 const TARGET_ATTRIBUTE = 'data-drop-target';
 
 /** The day column under the pointer on the Week board, if any. */
-function dayUnder(event: PointerEvent): HTMLElement | null {
+function dayUnder(point: Point): HTMLElement | null {
   return (
     document
-      .elementFromPoint(event.clientX, event.clientY)
+      .elementFromPoint(point.clientX, point.clientY)
       ?.closest<HTMLElement>(DAY_SELECTOR) ?? null
   );
 }
@@ -241,16 +352,18 @@ export function WeekDraggable({
     return day;
   };
 
+  const ref = useRef<HTMLDivElement>(null);
   const drag = useDragToPlace({
     axis: 'both',
     taskId,
-    onMove: (_, event) => {
+    ref,
+    onMove: (_, point) => {
       clearTargets();
-      const column = dayUnder(event);
+      const column = dayUnder(point);
       if (dayFor(column)) column!.setAttribute(TARGET_ATTRIBUTE, '');
     },
-    onDrop: (_, event) => {
-      const day = dayFor(dayUnder(event));
+    onDrop: (_, point) => {
+      const day = dayFor(dayUnder(point));
       return day ? startOnDay(start, day, timeZone) : null;
     },
     onEnd: clearTargets,
@@ -260,6 +373,7 @@ export function WeekDraggable({
     <div
       className={`relative ${dragClasses(drag.isDragging, drag.isPending)}`}
       style={drag.style}
+      ref={ref}
       onPointerDown={drag.onPointerDown}
       onClickCapture={drag.onClickCapture}
     >

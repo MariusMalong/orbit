@@ -131,7 +131,8 @@ export function Timeline({
               ? `Planned from ${formatClock(planStart, timeZone)}. `
               : ''}
             Click an hour or a free slot to add an event, or a block to change
-            it. Drag a task to move it.
+            it. Drag a task to move it (on a touch screen, press and hold it
+            first).
           </p>
         </div>
         <div className="shrink-0">{headerAction}</div>

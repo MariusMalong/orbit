@@ -47,7 +47,7 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 - Sign in with GitHub or Google, or try a demo account with sample data. A new account starts with a short setup: your working hours and days off, and a few first tasks.
 - Add tasks and fixed commitments (events, such as appointments or lectures) from one quick-add bar at the top of the page. Each task has a title, a time estimate, a priority (low, medium or high) and an optional due date and time.
 - Click an upcoming hour or a free slot on the timeline to add an event there, and click any block to edit it, mark it as done or delete it.
-- Drag a task up or down the timeline to a new time, or to another day on the Week page, and the rest of the plan moves around it. With a keyboard or on a touch screen, set a start time in the task's edit dialog instead.
+- Drag a task up or down the timeline to a new time, or to another day on the Week page, and the rest of the plan moves around it. On a touch screen, press and hold the task first; a quick swipe still scrolls. Dragging near the top or bottom of the window scrolls the page. With a keyboard, set a start time in the task's edit dialog instead.
 - Make an event repeat every week, such as a lecture or a gym session. Edit or delete just one week of it, or every week at once.
 - Set your working hours for the whole week in one place, and mark days off: nothing gets planned on them, and work moves to the next working day.
 - See whatever doesn't fit today planned into the following days, next to your upcoming events, under "Coming up", and how full each day of the week is.
@@ -80,7 +80,6 @@ The plan isn't stored. It's recalculated on every page load from the current dat
 
 ## Next steps
 
-- Drag tasks on touch screens, with a long press.
 - Projects for grouping tasks, and saved schedules. The `Project`, `Schedule` and `ScheduleBlock` models are already in the schema but aren't used yet.
 
 ## Tech stack
