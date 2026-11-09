@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import {
   calculateFreeWindows,
   ScheduleBlockResult,
@@ -25,6 +26,12 @@ interface TimelineProps {
   planStart: Date; // Where the engine started planning: now, or the start of the workday
   timeZone: string; // Visitor's timezone, for hour labels and times
   headerAction?: React.ReactNode;
+  /**
+   * Hours that have passed are hidden, apart from the last one, unless this
+   * is set. `earlierHref` is the link that toggles it.
+   */
+  showEarlier?: boolean;
+  earlierHref?: { show: string; hide: string };
   projectOf?: Record<string, ProjectInfo>; // Each task's project, by task id
 }
 
@@ -48,6 +55,8 @@ export function Timeline({
   timeZone,
   headerAction,
   projectOf = {},
+  showEarlier = false,
+  earlierHref,
 }: TimelineProps) {
   // Quick lookup map to resolve task titles and priorities by ID
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
@@ -55,9 +64,20 @@ export function Timeline({
   // The grid snaps outward to whole hours (in the visitor's timezone, which
   // may be offset by half an hour) so every hour line gets a label.
   const startMinute = getZonedParts(workDayStart, timeZone).minute;
-  const gridStart = new Date(
+  const fullGridStart = new Date(
     workDayStart.getTime() - startMinute * MS_PER_MINUTE
   );
+  const dayIsOver = planStart >= workDayEnd;
+  // Once the day is under way, the grid starts an hour before the current
+  // one, so what's next is at the top. The earlier hours are a click away.
+  const hoursGone = Math.floor(
+    (now.getTime() - fullGridStart.getTime()) / MS_PER_HOUR
+  );
+  const canHideEarlier = !!earlierHref && !dayIsOver && hoursGone >= 2;
+  const hideEarlier = canHideEarlier && !showEarlier;
+  const gridStart = hideEarlier
+    ? new Date(fullGridStart.getTime() + (hoursGone - 1) * MS_PER_HOUR)
+    : fullGridStart;
   const endMinute = getZonedParts(workDayEnd, timeZone).minute;
   const gridEnd = new Date(
     workDayEnd.getTime() + (endMinute > 0 ? 60 - endMinute : 0) * MS_PER_MINUTE
@@ -75,7 +95,6 @@ export function Timeline({
   const offsetPx = (date: Date) =>
     ((date.getTime() - gridStart.getTime()) / MS_PER_MINUTE) * PX_PER_MINUTE;
 
-  const dayIsOver = planStart >= workDayEnd;
   const showNowLine = now >= gridStart && now <= gridEnd;
   // Hide an hour label the "Now" label would sit on top of.
   const NOW_LABEL_CLEARANCE_PX = 14;
@@ -156,6 +175,18 @@ export function Timeline({
         )
       )}
 
+      {canHideEarlier && earlierHref && (
+        <Link
+          href={hideEarlier ? earlierHref.show : earlierHref.hide}
+          scroll={false}
+          className="-mb-3 self-start rounded-lg px-2 py-1 text-sm text-muted transition hover:bg-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+        >
+          {hideEarlier
+            ? `Show earlier (from ${formatClock(fullGridStart, timeZone)})`
+            : 'Hide earlier hours'}
+        </Link>
+      )}
+
       {/* Calendar grid */}
       <div
         className="relative mt-2 mb-2"
@@ -211,6 +242,8 @@ export function Timeline({
         {visibleCommitments.map((c) => {
           const time = `${formatClock(c.start, timeZone)} – ${formatClock(c.end, timeZone)}`;
           const height = offsetPx(c.drawEnd) - offsetPx(c.drawStart);
+          // Events that are over fade back, so what's still to come stands out.
+          const isOver = c.end <= now;
           return (
             <EventMenu
               key={c.key}
@@ -229,10 +262,12 @@ export function Timeline({
               }
               className="absolute right-1 left-16"
               style={{ top: offsetPx(c.drawStart), height }}
-              triggerClassName={`block h-full w-full cursor-pointer overflow-hidden rounded-lg border border-dashed border-line bg-subtle px-4 text-left transition hover:border-muted focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${height < 44 ? 'py-1' : 'py-2'}`}
+              triggerClassName={`block h-full w-full cursor-pointer overflow-hidden rounded-lg border border-dashed px-4 text-left transition hover:border-muted ${isOver ? 'border-line-soft bg-transparent' : 'border-line bg-subtle'} focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${height < 44 ? 'py-1' : 'py-2'}`}
               trigger={
                 <>
-                  <span className="block truncate text-sm font-medium text-ink-2">
+                  <span
+                    className={`block truncate text-sm font-medium ${isOver ? 'text-muted' : 'text-ink-2'}`}
+                  >
                     {c.title}
                     {c.repeatsWeekly && <RepeatIcon />}
                   </span>

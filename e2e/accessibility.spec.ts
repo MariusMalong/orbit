@@ -37,6 +37,39 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectAccessible(page);
     });
 
+    test('late-task banner and the Week summary, opened', async ({
+      page,
+      baseURL,
+    }) => {
+      const id = await signInAsNewUser(page.context(), baseURL!, {
+        onboardedAt: new Date(),
+        tasks: {
+          create: [
+            {
+              title: 'Big report',
+              durationEstimate: 600,
+              priority: 2,
+              deadline: new Date(Date.now() + 2 * 3_600_000),
+            },
+          ],
+        },
+      });
+      try {
+        await page.goto('/');
+        await expect(
+          page.getByRole('region', { name: /won't make/ })
+        ).toBeVisible();
+        await expectAccessible(page);
+
+        await page.goto('/week');
+        await page.getByText('Show details').click();
+        await expect(page.getByText('Hide details')).toBeVisible();
+        await expectAccessible(page);
+      } finally {
+        await deleteUser(id);
+      }
+    });
+
     test('projects dialog', async ({ page }) => {
       await startDemo(page);
       await page.getByRole('button', { name: 'Projects', exact: true }).click();

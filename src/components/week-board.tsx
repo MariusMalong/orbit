@@ -18,6 +18,7 @@ interface WeekBoardProps {
   lateTaskIds: string[];
   projectOf?: Record<string, ProjectInfo>; // Each task's project, by task id
   timeZone: string;
+  now?: Date; // Events that ended before this are shown faded
 }
 
 type Item =
@@ -42,6 +43,7 @@ export function WeekBoard({
   lateTaskIds,
   timeZone,
   projectOf = {},
+  now,
 }: WeekBoardProps) {
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const late = new Set(lateTaskIds);
@@ -136,6 +138,7 @@ export function WeekBoard({
 
                   if (item.kind === 'event') {
                     const { event } = item;
+                    const isOver = !!now && event.end <= now;
                     return (
                       <li key={`event-${event.key}`}>
                         <EventMenu
@@ -153,13 +156,15 @@ export function WeekBoard({
                             />
                           }
                           panelClassName={panelSide}
-                          triggerClassName={`${itemClass} border border-dashed border-line bg-subtle hover:border-muted`}
+                          triggerClassName={`${itemClass} border border-dashed hover:border-muted ${isOver ? 'border-line-soft bg-transparent' : 'border-line bg-subtle'}`}
                           trigger={
                             <>
                               <span className="block text-[11px] text-muted tabular-nums">
                                 {time}
                               </span>
-                              <span className="block text-xs leading-snug font-medium break-words text-ink-2">
+                              <span
+                                className={`block text-xs leading-snug font-medium break-words ${isOver ? 'text-muted' : 'text-ink-2'}`}
+                              >
                                 {event.title}
                                 {event.repeatsWeekly && <RepeatIcon />}
                               </span>

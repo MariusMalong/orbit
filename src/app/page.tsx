@@ -10,9 +10,11 @@ import { NowCard, type NowItem } from '@/components/now-card';
 import { TaskList } from '@/components/task-list';
 import { ProjectsProvider } from '@/components/projects-context';
 import { WeekCard } from '@/components/week-card';
+import { LateTasks, type LateTask } from '@/components/late-tasks';
+import { lateReason } from '@/lib/late';
 import { summarizeDay } from '@/lib/analytics/summarize';
 import { loadPlan } from '@/lib/planning/load-plan';
-import { formatDue, formatMinutes } from '@/lib/format';
+import { formatMinutes } from '@/lib/format';
 import { startOfNextZonedDay, startOfZonedDay } from '@/lib/time/zoned';
 import { toDateKey } from '@/lib/time/clock';
 
@@ -36,7 +38,7 @@ function ClockIcon() {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string }>;
+  searchParams: Promise<{ project?: string; earlier?: string }>;
 }) {
   const session = await auth();
 
@@ -61,7 +63,14 @@ export default async function Home({
     projects,
     projectOf,
   } = await loadPlan(session.user.id);
-  const { project: projectFilter } = await searchParams;
+  const { project: projectFilter, earlier } = await searchParams;
+  // Links that keep the other query parameters as they are.
+  const todayHref = (params: { project?: string; earlier?: string }) => {
+    const query = new URLSearchParams(
+      Object.entries(params).filter((e): e is [string, string] => !!e[1])
+    ).toString();
+    return query ? `/?${query}` : '/';
+  };
 
   const todayPlan = days[0];
   const workDayStart = todayPlan.workDayStart;
@@ -128,14 +137,18 @@ export default async function Home({
     );
   }
 
-  const lateTasks = schedulableTasks
+  // Tasks that won't make their deadline, shown first with ways to fix it.
+  const lateTasks: LateTask[] = rawTasks
     .filter((t) => lateTaskIds.includes(t.id))
     .map((t) => ({
       id: t.id,
       title: t.title,
-      due: t.deadline
-        ? formatDue(t.deadline, today, timeZone).replace(/^Due/, 'due')
-        : '',
+      durationEstimate: t.durationEstimate,
+      priority: t.priority,
+      deadline: t.deadline,
+      plannedStart: t.plannedStart,
+      projectId: t.projectId,
+      reason: lateReason(t.deadline, today, timeZone).text,
     }));
 
   // The rest of today for the phone's Now card: planned work and events that
@@ -186,6 +199,15 @@ export default async function Home({
             )}
           </div>
 
+          <LateTasks tasks={lateTasks}>
+            <WorkingHours
+              week={week}
+              label="Change working hours"
+              trigger="Change working hours"
+              triggerClassName="cursor-pointer rounded font-medium text-ink underline decoration-danger/60 underline-offset-2 hover:decoration-danger focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+            />
+          </LateTasks>
+
           {/* On phones, what to do now comes first; the timeline is further down. */}
           <div className="md:hidden">
             <NowCard
@@ -212,6 +234,11 @@ export default async function Home({
                 planStart={planStart}
                 timeZone={timeZone}
                 projectOf={projectOf}
+                showEarlier={earlier === '1'}
+                earlierHref={{
+                  show: todayHref({ project: projectFilter, earlier: '1' }),
+                  hide: todayHref({ project: projectFilter }),
+                }}
                 headerAction={
                   <WorkingHours
                     week={week}
@@ -256,7 +283,6 @@ export default async function Home({
               <WeekCard
                 days={days}
                 loads={loads}
-                lateTasks={lateTasks}
                 leftovers={leftovers.map((l) => ({
                   id: l.task.id,
                   title: l.task.title,

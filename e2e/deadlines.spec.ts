@@ -50,6 +50,7 @@ test('starts a task early for its deadline and says what moved', async ({
   });
 
   await page.goto('/week');
+  await page.getByText('Show details').click();
   const notice = page.getByRole('region', {
     name: 'Planned around your deadlines',
   });
@@ -102,6 +103,7 @@ test('gives work due after this week its share of this week', async ({
   });
 
   await page.goto('/week');
+  await page.getByText('Show details').click();
   const notice = page.getByRole('region', {
     name: 'Planned around your deadlines',
   });
