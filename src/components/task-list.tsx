@@ -1,6 +1,6 @@
 import { FocusTimer } from '@/components/focus-timer';
 import { TaskMenu } from '@/components/item-menus';
-import { formatDue, formatShortDay, PRIORITY_LABELS } from '@/lib/format';
+import { formatDue, formatShortDay } from '@/lib/format';
 import { panel, panelTitle } from '@/components/ui-classes';
 import { toDateKey } from '@/lib/time/clock';
 import Link from 'next/link';
@@ -31,12 +31,21 @@ interface TaskListProps {
   timeZone: string;
 }
 
-// Darker dots for more important tasks (low is an outline); the label is also in the title and for screen readers.
-const PRIORITY_DOTS: Record<number, string> = {
-  3: 'bg-ink',
-  2: 'bg-muted',
-  1: 'border border-muted',
-};
+// One small piece of a task's details. Spaced apart rather than joined with
+// dots, so each can be picked out at a glance.
+function Meta({
+  children,
+  className = 'text-muted',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <span className={`inline-flex items-center gap-1 ${className}`}>
+      {children}
+    </span>
+  );
+}
 
 /** Every open task, one compact row each: focus, title and details, menu. */
 export function TaskList({
@@ -112,19 +121,13 @@ export function TaskList({
               ? projectById.get(task.projectId)
               : undefined;
             const isLate = lateTaskIds.has(task.id);
-            const priority = PRIORITY_LABELS[task.priority] ?? '';
+            const inProgress = task.status === 'IN_PROGRESS';
             const planned = nextPlanned.get(task.id);
-            const details = [
-              `${task.durationEstimate} min${task.status === 'IN_PROGRESS' ? ' left' : ''}`,
-              task.status === 'IN_PROGRESS' ? 'In progress' : null,
-              task.deadline ? formatDue(task.deadline, now, timeZone) : null,
-              isLate ? "won't make it" : null,
-              planned
-                ? `Planned ${isSameZonedDay(planned, tomorrow, timeZone) ? 'tomorrow' : formatShortDay(planned, timeZone)}`
-                : planned === null
-                  ? 'Not planned this week'
-                  : null,
-            ].filter(Boolean);
+            const plannedText = planned
+              ? `Planned ${isSameZonedDay(planned, tomorrow, timeZone) ? 'tomorrow' : formatShortDay(planned, timeZone)}`
+              : planned === null
+                ? 'Not planned this week'
+                : null;
 
             return (
               <li
@@ -136,27 +139,45 @@ export function TaskList({
                   <p className="line-clamp-2 font-medium break-words">
                     {task.title}
                   </p>
-                  <p
-                    className={`text-xs ${isLate ? 'text-danger' : 'text-muted'}`}
-                  >
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-xs">
                     {project && (
-                      <>
+                      <Meta className="font-medium text-ink-2">
                         <span
                           aria-hidden="true"
-                          className={`mr-1 inline-block h-2 w-2 rounded-full ${projectDot(project.color)}`}
+                          className={`h-2 w-2 rounded-full ${projectDot(project.color)}`}
                         />
-                        {project.name} ·{' '}
-                      </>
+                        {project.name}
+                        <span className="sr-only">,</span>
+                      </Meta>
                     )}
-                    {details.join(' · ')}
+                    {task.priority === 3 && (
+                      <Meta className="rounded bg-subtle px-1.5 font-semibold text-ink">
+                        High<span className="sr-only"> priority,</span>
+                      </Meta>
+                    )}
+                    <Meta>
+                      {task.durationEstimate} min{inProgress ? ' left' : ''}
+                      <span className="sr-only">,</span>
+                    </Meta>
+                    {inProgress && (
+                      <Meta className="font-medium text-ink-2">
+                        In progress<span className="sr-only">,</span>
+                      </Meta>
+                    )}
+                    {task.deadline && (
+                      <Meta
+                        className={
+                          isLate ? 'font-medium text-danger' : 'text-muted'
+                        }
+                      >
+                        {formatDue(task.deadline, now, timeZone)}
+                        {isLate ? " · won't make it" : ''}
+                        <span className="sr-only">,</span>
+                      </Meta>
+                    )}
+                    {plannedText && <Meta>{plannedText}</Meta>}
                   </p>
                 </div>
-                <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOTS[task.priority] ?? 'border border-muted'}`}
-                  title={`${priority} priority`}
-                >
-                  <span className="sr-only">{priority} priority</span>
-                </span>
                 <TaskMenu
                   task={task}
                   label={`More for ${task.title}`}

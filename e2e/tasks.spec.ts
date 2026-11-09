@@ -19,7 +19,7 @@ test('adds a task from the quick-add bar', async ({ page }) => {
   });
   await expect(row).toBeVisible();
   await expect(row).toContainText('45 min');
-  await expect(row.getByTitle('High priority')).toBeAttached();
+  await expect(row.getByText(/^High\s*priority/)).toBeVisible();
   // The bar is cleared for the next task.
   await expect(quickAddTitle(page)).toHaveValue('');
 });

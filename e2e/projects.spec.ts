@@ -51,7 +51,10 @@ test('make a project, put tasks in it, filter by it, and delete it', async ({
   const edit = page.getByRole('dialog', { name: 'Edit task' });
   await edit.getByRole('combobox', { name: 'Project' }).selectOption('Thesis');
   await edit.getByRole('button', { name: 'Save' }).click();
-  await expect(taskRow(page, 'Write report')).toContainText('Thesis ·');
+  // The dialog sits inside the row, so wait for it to close before reading
+  // the row: its project list says "Thesis" too.
+  await expect(edit).toBeHidden();
+  await expect(taskRow(page, 'Write report')).toContainText('Thesis');
 
   // And a new one, from the quick-add bar.
   await quickAddTitle(page).fill('Read chapter 2');
@@ -60,7 +63,7 @@ test('make a project, put tasks in it, filter by it, and delete it', async ({
     .getByRole('combobox', { name: 'Project' })
     .selectOption('Thesis');
   await quickAddSubmit(page).click();
-  await expect(taskRow(page, 'Read chapter 2')).toContainText('Thesis ·');
+  await expect(taskRow(page, 'Read chapter 2')).toContainText('Thesis');
 
   // Filtering shows only the project's tasks.
   await page
