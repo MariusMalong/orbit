@@ -12,6 +12,7 @@ import {
   formatShortDay,
 } from '@/lib/format';
 import { loadPlan } from '@/lib/planning/load-plan';
+import { lateReason } from '@/lib/late';
 import { ProjectsProvider } from '@/components/projects-context';
 import { ProjectsDialog } from '@/components/projects-dialog';
 import { plannedByProject, projectDot } from '@/lib/projects';
@@ -55,19 +56,33 @@ export default async function WeekPage() {
       plan.unscheduledTaskIds.includes(t.id) && !plan.lateTaskIds.includes(t.id)
   );
 
-  // The planner already starts deadline work as early as it needs to (see
-  // src/lib/engine/reservations.ts), so a task that's still late doesn't fit
-  // in the time before its deadline at all.
-  const isOverdue = (task: SchedulableTask) =>
-    !!task.deadline && task.deadline <= now;
   const lateMessage = (task: SchedulableTask) => {
-    const due = task.deadline
-      ? formatDue(task.deadline, now, timeZone).replace(/^Due /, '')
-      : '';
-    return isOverdue(task)
-      ? `was due ${due}. It's planned as soon as possible.`
-      : `won't be done by ${due}, even started as early as possible. Free up time before then or change your working hours.`;
+    const { overdue, text } = lateReason(task.deadline, now, timeZone);
+    return overdue
+      ? text
+      : `${text} Free up time before then or change your working hours.`;
   };
+
+  // The one-line summary of everything that needs a look this week.
+  const summaryParts = [
+    lateTasks.length > 0 && {
+      text: `${lateTasks.length} late`,
+      className: 'text-danger',
+    },
+    notThisWeek.length > 0 && {
+      text: `${notThisWeek.length} ${notThisWeek.length === 1 ? "doesn't" : "don't"} fit this week`,
+      className: 'text-warning-ink',
+    },
+    changes.startedEarly.length + changes.movedLater.length > 0 && {
+      text: `${changes.startedEarly.length + changes.movedLater.length} ${
+        changes.startedEarly.length + changes.movedLater.length === 1
+          ? 'change'
+          : 'changes'
+      } for deadlines`,
+      className: 'text-ink',
+    },
+  ].filter((part): part is { text: string; className: string } => !!part);
+  const noticeCount = summaryParts.length;
 
   // How a day is named in sentences: "today", "tomorrow", or "Mon 9 Nov".
   const dayName = (index: number) =>
@@ -115,74 +130,111 @@ export default async function WeekPage() {
           </div>
         </div>
 
-        {lateTasks.map((task) => (
-          <div
-            key={task.id}
-            role="status"
-            className="rounded-lg border border-danger/40 bg-danger/5 px-4 py-3 text-sm text-danger"
+        {noticeCount > 0 && (
+          // One line that says what needs a look, so the board stays near the
+          // top; the details open from it.
+          <details
+            className={`group rounded-lg border px-4 py-2.5 text-sm ${
+              lateTasks.length > 0
+                ? 'border-danger/40 bg-danger/5'
+                : notThisWeek.length > 0
+                  ? 'border-warning-line bg-warning-bg'
+                  : 'border-line bg-surface'
+            }`}
           >
-            <p>
-              <strong className="font-semibold">{task.title}</strong>{' '}
-              {lateMessage(task)}
-            </p>
-          </div>
-        ))}
+            <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1 rounded focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                aria-hidden="true"
+                className="shrink-0 text-muted transition group-open:rotate-90"
+              >
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+              {summaryParts.map((part) => (
+                <span
+                  key={part.text}
+                  className={`font-medium ${part.className}`}
+                >
+                  {part.text}
+                </span>
+              ))}
+              <span className="text-muted group-open:hidden">Show details</span>
+              <span className="hidden text-muted group-open:inline">
+                Hide details
+              </span>
+            </summary>
+            <div className="mt-3 flex flex-col gap-3 border-t border-line-soft pt-3">
+              {lateTasks.map((task) => (
+                <div key={task.id} role="status" className="text-danger">
+                  <p>
+                    <strong className="font-semibold">{task.title}</strong>{' '}
+                    {lateMessage(task)}
+                  </p>
+                </div>
+              ))}
 
-        {changes.startedEarly.length > 0 && (
-          <section
-            aria-labelledby="deadline-changes"
-            className="rounded-lg border border-line bg-surface px-4 py-3 text-sm"
-          >
-            <h2 id="deadline-changes" className="font-semibold">
-              Planned around your deadlines
-            </h2>
-            <ul className="mt-1 flex flex-col gap-0.5 text-ink-2">
-              {changes.startedEarly.map(({ taskId, firstDayIndex }) => {
-                const deadline = tasks.find((t) => t.id === taskId)?.deadline;
-                const due = deadline
-                  ? formatDue(deadline, now, timeZone).replace(/^Due /, '')
-                  : 'its deadline';
-                // Due after this week: say how much of it has to happen now.
-                const dueLater = !!deadline && deadline >= weekEnd;
-                return (
-                  <li key={taskId}>
-                    <strong className="font-medium text-ink">
-                      {titleOf(taskId)}
-                    </strong>{' '}
-                    {dueLater
-                      ? `gets ${formatMinutes(minutesThisWeek(taskId))} this week, starting ${dayName(firstDayIndex)}, so it's done by ${due}.`
-                      : `starts ${dayName(firstDayIndex)}, so it's done by ${due}.`}
-                  </li>
-                );
-              })}
-              {changes.movedLater.map(
-                ({ taskId, fromDayIndex, toDayIndex }) => (
-                  <li key={taskId}>
-                    To make room,{' '}
-                    <strong className="font-medium text-ink">
-                      {titleOf(taskId)}
-                    </strong>{' '}
-                    {toDayIndex === null
-                      ? `now finishes after this week instead of ${dayName(fromDayIndex)}.`
-                      : `now finishes ${dayName(toDayIndex)} instead of ${dayName(fromDayIndex)}.`}
-                  </li>
-                )
+              {changes.startedEarly.length > 0 && (
+                <section aria-labelledby="deadline-changes">
+                  <h3 id="deadline-changes" className="font-semibold">
+                    Planned around your deadlines
+                  </h3>
+                  <ul className="mt-1 flex flex-col gap-0.5 text-ink-2">
+                    {changes.startedEarly.map(({ taskId, firstDayIndex }) => {
+                      const deadline = tasks.find(
+                        (t) => t.id === taskId
+                      )?.deadline;
+                      const due = deadline
+                        ? formatDue(deadline, now, timeZone).replace(
+                            /^Due /,
+                            ''
+                          )
+                        : 'its deadline';
+                      // Due after this week: say how much of it has to happen now.
+                      const dueLater = !!deadline && deadline >= weekEnd;
+                      return (
+                        <li key={taskId}>
+                          <strong className="font-medium text-ink">
+                            {titleOf(taskId)}
+                          </strong>{' '}
+                          {dueLater
+                            ? `gets ${formatMinutes(minutesThisWeek(taskId))} this week, starting ${dayName(firstDayIndex)}, so it's done by ${due}.`
+                            : `starts ${dayName(firstDayIndex)}, so it's done by ${due}.`}
+                        </li>
+                      );
+                    })}
+                    {changes.movedLater.map(
+                      ({ taskId, fromDayIndex, toDayIndex }) => (
+                        <li key={taskId}>
+                          To make room,{' '}
+                          <strong className="font-medium text-ink">
+                            {titleOf(taskId)}
+                          </strong>{' '}
+                          {toDayIndex === null
+                            ? `now finishes after this week instead of ${dayName(fromDayIndex)}.`
+                            : `now finishes ${dayName(toDayIndex)} instead of ${dayName(fromDayIndex)}.`}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </section>
               )}
-            </ul>
-          </section>
-        )}
 
-        {notThisWeek.length > 0 && (
-          <div
-            role="status"
-            className="rounded-lg border border-warning-line bg-warning-bg px-4 py-3 text-sm text-warning-ink"
-          >
-            <strong className="font-semibold">
-              Not enough time this week for:
-            </strong>{' '}
-            {notThisWeek.map((t) => t.title).join(', ')}. Extend your hours or
-            free up time.
-          </div>
+              {notThisWeek.length > 0 && (
+                <div role="status" className="text-warning-ink">
+                  <strong className="font-semibold">
+                    Not enough time this week for:
+                  </strong>{' '}
+                  {notThisWeek.map((t) => t.title).join(', ')}. Extend your
+                  hours or free up time.
+                </div>
+              )}
+            </div>
+          </details>
         )}
 
         <QuickAdd today={toDateKey(now, timeZone)} />
@@ -224,6 +276,7 @@ export default async function WeekPage() {
           lateTaskIds={plan.lateTaskIds}
           timeZone={timeZone}
           projectOf={projectOf}
+          now={now}
         />
       </div>
     </ProjectsProvider>
