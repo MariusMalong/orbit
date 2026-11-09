@@ -216,6 +216,7 @@ export default async function Home({
               isDayOff={todayPlan.isDayOff}
               now={today}
               timeZone={timeZone}
+              projectOf={projectOf}
             />
           </div>
 
@@ -266,6 +267,7 @@ export default async function Home({
                 events={commitments.filter((c) => c.start >= startOfTomorrow)}
                 lateTaskIds={lateTaskIds}
                 timeZone={timeZone}
+                projectOf={projectOf}
               />
             </div>
 

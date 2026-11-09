@@ -1,4 +1,5 @@
 import { completeTask } from '@/app/actions/task';
+import { projectDot, type ProjectInfo } from '@/lib/projects';
 import { FocusTimer } from '@/components/focus-timer';
 import { buttonSecondary, panel } from '@/components/ui-classes';
 import { formatClock, formatDue, PRIORITY_LABELS } from '@/lib/format';
@@ -14,6 +15,7 @@ interface NowCardProps {
   isDayOff: boolean;
   now: Date;
   timeZone: string;
+  projectOf?: Record<string, ProjectInfo>; // Each task's project, by task id
 }
 
 const NEXT_COUNT = 4;
@@ -31,7 +33,15 @@ export function NowCard({
   isDayOff,
   now,
   timeZone,
+  projectOf = {},
 }: NowCardProps) {
+  // A task's bar is in its project's colour, as on the timeline.
+  const barColor = (item: NowItem) =>
+    item.kind !== 'task'
+      ? 'bg-line'
+      : projectOf[item.task.id]
+        ? projectDot(projectOf[item.task.id].color)
+        : 'bg-accent';
   if (items.length === 0) {
     return (
       <section aria-label="Now" className={panel}>
@@ -145,7 +155,7 @@ export function NowCard({
                 </span>
                 <span
                   aria-hidden="true"
-                  className={`w-1 shrink-0 rounded-full ${item.kind === 'task' ? 'bg-accent' : 'bg-line'}`}
+                  className={`w-1 shrink-0 rounded-full ${barColor(item)}`}
                 />
                 <span className="min-w-0 flex-1">
                   <span

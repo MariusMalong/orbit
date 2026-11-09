@@ -1,7 +1,8 @@
 import type { DayBlock } from '@/lib/engine/multi-day';
 import type { SchedulableTask } from '@/lib/engine/scheduler';
 import type { PlanningDayInfo } from '@/lib/planning/days';
-import { formatClock, formatShortDay, PRIORITY_LABELS } from '@/lib/format';
+import { formatClock, formatShortDay } from '@/lib/format';
+import { blockStripe, type ProjectInfo } from '@/lib/projects';
 import { panel } from '@/components/ui-classes';
 import { EventMenu, MenuHeading, TaskMenu } from '@/components/item-menus';
 import type { EventOccurrence } from '@/lib/planning/recurrence';
@@ -14,6 +15,7 @@ interface ComingUpProps {
   events: EventOccurrence[]; // Events that start after today, in time order
   lateTaskIds: string[];
   timeZone: string;
+  projectOf?: Record<string, ProjectInfo>; // Each task's project, by task id
 }
 
 type Item =
@@ -36,6 +38,7 @@ export function ComingUp({
   events,
   lateTaskIds,
   timeZone,
+  projectOf = {},
 }: ComingUpProps) {
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const late = new Set(lateTaskIds);
@@ -161,18 +164,23 @@ export function ComingUp({
                 }
 
                 const { task } = item;
+                const project = projectOf[task.id];
                 return (
                   <li key={`task-${task.id}-${item.start.getTime()}`}>
                     <TaskMenu
-                      task={{ ...task, deadline: task.deadline ?? null }}
+                      task={{
+                        ...task,
+                        deadline: task.deadline ?? null,
+                        projectId: project?.id ?? null,
+                      }}
                       heading={
                         <MenuHeading
                           title={task.title}
-                          detail={`${formatShortDay(item.start, timeZone)}, ${time}`}
+                          detail={`${formatShortDay(item.start, timeZone)}, ${time}${project ? ` · ${project.name}` : ''}`}
                         />
                       }
                       panelClassName="left-0"
-                      triggerClassName={`${rowClass} bg-accent-tint shadow-[inset_3px_0_0_var(--color-accent-edge)] hover:brightness-[0.97]`}
+                      triggerClassName={`${rowClass} bg-accent-tint ${blockStripe(project?.color)} hover:brightness-[0.97]`}
                       trigger={
                         <>
                           {timeLabel}
@@ -184,9 +192,11 @@ export function ComingUp({
                               Late
                             </span>
                           )}
-                          <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-medium">
-                            {PRIORITY_LABELS[task.priority] ?? ''}
-                          </span>
+                          {task.priority === 3 && (
+                            <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-semibold">
+                              High<span className="sr-only"> priority</span>
+                            </span>
+                          )}
                           <span className="sr-only">
                             . Edit, mark as done or delete
                           </span>
