@@ -53,6 +53,9 @@ async function signInWithOneTask(
 
 /** Presses on `item`, moves the mouse by (dx, dy) in steps and lets go. */
 async function drag(page: Page, item: Locator, dx: number, dy: number) {
+  // Start well away from the window's edges, where dragging scrolls the page.
+  const start = (await item.boundingBox())!;
+  await page.evaluate((y) => window.scrollBy(0, y), start.y - 160);
   const box = (await item.boundingBox())!;
   const x = box.x + box.width / 2;
   const y = box.y + Math.min(box.height / 2, 12);
@@ -78,8 +81,8 @@ test('dragging a task down the timeline places it later, until it is handed back
   const block = plan.getByRole('button', { name: /^Write report/ });
   const before = minutesOfDay((await block.textContent())!);
 
-  // The timeline is 64px an hour, so this is 3 hours later.
-  await drag(page, block, 0, 192);
+  // The timeline is 80px an hour, so this is 3 hours later.
+  await drag(page, block, 0, 240);
 
   await expect(block).toContainText('Your time');
   const after = minutesOfDay((await block.textContent())!);
@@ -179,7 +182,7 @@ test.describe('on a touch screen', () => {
     await block.scrollIntoViewIfNeeded();
     const before = minutesOfDay((await block.textContent())!);
 
-    await touchDrag(page, block, 600, 128); // Two hours down
+    await touchDrag(page, block, 600, 160); // Two hours down
     await expect(block).toContainText('Your time');
     const after = minutesOfDay((await block.textContent())!);
     expect(after - before).toBeGreaterThanOrEqual(105);
@@ -197,7 +200,7 @@ test.describe('on a touch screen', () => {
     const block = plan.getByRole('button', { name: /^Write report/ });
     await block.scrollIntoViewIfNeeded();
 
-    await touchDrag(page, block, 0, 128);
+    await touchDrag(page, block, 0, 160);
     await page.waitForLoadState('networkidle');
     const saved = await prisma.task.findFirstOrThrow({ where: { userId } });
     expect(saved.plannedStart).toBeNull();

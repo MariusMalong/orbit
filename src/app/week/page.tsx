@@ -112,9 +112,13 @@ export default async function WeekPage() {
               {formatDayRange(days[0].date, lastDay.date, timeZone)}
             </h1>
             <p className="mt-1 text-muted">
-              Whatever doesn&apos;t fit one day moves to the next working day.
-              Click anything to change it, or drag a task to another day (press
-              and hold it first on a touch screen).
+              Work that doesn&apos;t fit moves to the next working day.{' '}
+              <span className="pointer-coarse:hidden">
+                Drag a task to another day to move it.
+              </span>
+              <span className="hidden pointer-coarse:inline">
+                Press and hold a task to move it to another day.
+              </span>
             </p>
           </div>
           <div className="flex gap-2">
