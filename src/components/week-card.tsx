@@ -6,7 +6,6 @@ import { panel, panelTitle } from '@/components/ui-classes';
 interface WeekCardProps {
   days: PlanningDayInfo[]; // Today first
   loads: DayLoad[]; // One per day, same order
-  lateTasks: { id: string; title: string; due: string }[]; // due: e.g. "due Sun 8 Nov, 10:00"
   // Tasks with time left after today, and when they continue (null: not this week)
   leftovers: { id: string; title: string; continuesOn: Date | null }[];
   timeZone: string;
@@ -16,13 +15,7 @@ interface WeekCardProps {
  * How full each of the next 7 days is, plus anything that needs attention:
  * tasks that will miss their deadline and work that didn't fit today.
  */
-export function WeekCard({
-  days,
-  loads,
-  lateTasks,
-  leftovers,
-  timeZone,
-}: WeekCardProps) {
+export function WeekCard({ days, loads, leftovers, timeZone }: WeekCardProps) {
   const notThisWeek = leftovers.filter((l) => !l.continuesOn);
 
   return (
@@ -72,28 +65,8 @@ export function WeekCard({
         })}
       </ol>
 
-      {(lateTasks.length > 0 || leftovers.length > 0) && (
+      {leftovers.length > 0 && (
         <div className="mt-4 flex flex-col gap-2">
-          {lateTasks.length > 0 && (
-            <div
-              role="status"
-              className="rounded-lg border border-danger/40 bg-danger/5 px-3 py-2.5 text-sm text-danger"
-            >
-              <p className="font-semibold">
-                {lateTasks.length === 1
-                  ? "1 task won't be done in time"
-                  : `${lateTasks.length} tasks won't be done in time`}
-              </p>
-              <ul className="mt-1 flex flex-col gap-0.5">
-                {lateTasks.map((task) => (
-                  <li key={task.id}>
-                    {task.title} · {task.due}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           {leftovers.length > 0 && (
             <div
               role="status"
