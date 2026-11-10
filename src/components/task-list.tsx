@@ -1,4 +1,5 @@
 import { FocusTimer } from '@/components/focus-timer';
+import { EmptyState } from '@/components/empty-state';
 import { TaskMenu } from '@/components/item-menus';
 import { formatDue, formatShortDay } from '@/lib/format';
 import { panel, panelTitle } from '@/components/ui-classes';
@@ -111,9 +112,10 @@ export function TaskList({
           No open tasks in this project.
         </p>
       ) : tasks.length === 0 ? (
-        <p className="py-3 text-sm text-muted">
-          No open tasks. Add one above and it will appear on your plan.
-        </p>
+        <EmptyState picture="done" title="No open tasks" addTask>
+          Add what you need to do, with a rough estimate, and Orbit plans it
+          into your day.
+        </EmptyState>
       ) : (
         <ul>
           {shown.map((task) => {

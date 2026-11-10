@@ -183,6 +183,28 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectAccessible(page);
     });
 
+    test('empty Today for a new account, on a computer and a phone', async ({
+      page,
+      context,
+      baseURL,
+    }) => {
+      const userId = await signInAsNewUser(context, baseURL!);
+      try {
+        await page.goto('/welcome');
+        await page.getByRole('button', { name: 'Skip for now' }).click();
+        await expect(page.getByText('No open tasks')).toBeVisible();
+        await expectAccessible(page);
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await expect(
+          page.getByText('Nothing else planned today')
+        ).toBeVisible();
+        await expectAccessible(page);
+      } finally {
+        await deleteUser(userId);
+      }
+    });
+
     test('welcome page', async ({ page, context, baseURL }) => {
       const userId = await signInAsNewUser(context, baseURL!);
       try {

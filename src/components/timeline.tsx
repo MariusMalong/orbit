@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { EmptyState } from '@/components/empty-state';
 import {
   calculateFreeWindows,
   ScheduleBlockResult,
@@ -42,6 +43,9 @@ const MS_PER_MINUTE = 60_000;
 const MS_PER_HOUR = 3_600_000;
 // Free time shorter than this isn't offered as a slot for a new event.
 const MIN_FREE_SLOT_MINUTES = 15;
+
+// On a phone the Now card above already says the day is empty.
+const phoneSaysEmpty = 'hidden md:flex';
 
 export function Timeline({
   scheduledBlocks,
@@ -165,17 +169,24 @@ export function Timeline({
       </div>
 
       {isDayOff ? (
-        <p className="rounded-lg bg-subtle px-4 py-3 text-sm text-ink-2">
-          Today is a day off, so no tasks are planned. Events still show here,
-          and you can add more.
-        </p>
+        <EmptyState
+          picture="rest"
+          title="Today is a day off"
+          className={phoneSaysEmpty}
+        >
+          No tasks are planned today. Events still show here, and you can add
+          more.
+        </EmptyState>
       ) : (
         scheduledBlocks.length === 0 &&
         !dayIsOver && (
-          <p className="text-sm text-muted">
-            Nothing planned for the rest of today. Add a task above and Orbit
-            will fit it in.
-          </p>
+          <EmptyState
+            picture="orbit"
+            title="Nothing planned for the rest of today"
+            className={phoneSaysEmpty}
+          >
+            Add a task and Orbit will fit it in around your events.
+          </EmptyState>
         )
       )}
 

@@ -1,4 +1,5 @@
 import { completeTask } from '@/app/actions/task';
+import { EmptyState } from '@/components/empty-state';
 import { projectDot, type ProjectInfo } from '@/lib/projects';
 import { FocusTimer } from '@/components/focus-timer';
 import { buttonSecondary, panel } from '@/components/ui-classes';
@@ -45,14 +46,21 @@ export function NowCard({
   if (items.length === 0) {
     return (
       <section aria-label="Now" className={panel}>
-        <p className="font-display text-lg font-semibold">
-          {isDayOff ? 'Today is a day off' : 'Nothing else planned today'}
-        </p>
-        <p className="mt-1 text-sm text-muted">
-          {isDayOff
-            ? 'No tasks are planned today. Anything new is planned for your next working day.'
-            : 'Add a task below and Orbit will fit it in, or see what comes next on the Week page.'}
-        </p>
+        {isDayOff ? (
+          <EmptyState picture="rest" title="Today is a day off">
+            No tasks are planned today. Anything new is planned for your next
+            working day.
+          </EmptyState>
+        ) : (
+          <EmptyState
+            picture="orbit"
+            title="Nothing else planned today"
+            addTask
+          >
+            Add a task and Orbit will fit it in, or see what comes next on the
+            Week page.
+          </EmptyState>
+        )}
       </section>
     );
   }
