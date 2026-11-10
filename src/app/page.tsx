@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Timeline } from '@/components/timeline';
 import { WorkingHours } from '@/components/working-hours';
 import { ComingUp } from '@/components/coming-up';
+import { DayStats } from '@/components/day-stats';
 import { QuickAdd } from '@/components/quick-add';
 import { FocusProvider } from '@/components/focus-context';
 import { NowCard, type NowItem } from '@/components/now-card';
@@ -14,7 +15,6 @@ import { LateTasks, type LateTask } from '@/components/late-tasks';
 import { lateReason } from '@/lib/late';
 import { summarizeDay } from '@/lib/analytics/summarize';
 import { loadPlan } from '@/lib/planning/load-plan';
-import { formatMinutes } from '@/lib/format';
 import { startOfNextZonedDay, startOfZonedDay } from '@/lib/time/zoned';
 import { toDateKey } from '@/lib/time/clock';
 
@@ -182,17 +182,13 @@ export default async function Home({
     <ProjectsProvider projects={projects}>
       <FocusProvider>
         <div className="flex flex-col gap-5">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+          <div className="flex flex-col gap-3">
             <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
               {todayLabel}
             </h1>
-            <p className="text-muted tabular-nums">
-              {formatMinutes(summary.focusedMinutes)} focused ·{' '}
-              {summary.completedTasks} of {summary.plannedTasks} done ·{' '}
-              {formatMinutes(summary.scheduledMinutes)} planned
-            </p>
+            <DayStats summary={summary} />
             {session.user.isDemo && (
-              <p className="basis-full text-sm text-muted">
+              <p className="text-sm text-muted">
                 You&apos;re in a demo account filled with sample data. Change
                 anything you like: it&apos;s deleted after 24 hours.
               </p>
