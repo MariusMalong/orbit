@@ -103,10 +103,13 @@ test('tapping free time on the timeline opens the sheet for an event', async ({
   ).toHaveAttribute('aria-pressed', 'true');
   await expect(sheet(page).getByLabel('Starts')).toHaveValue(time);
 
-  await page.keyboard.type('Dentist');
+  // A name the demo doesn't use (it has a "Dentist appointment" some days).
+  await page.keyboard.type('Plumber visit');
   await sheet(page).getByRole('button', { name: 'Add', exact: true }).click();
   await expect(sheet(page)).toBeHidden();
   await expect(
-    page.getByRole('region', { name: "Today's plan" }).getByText('Dentist')
+    page
+      .getByRole('region', { name: "Today's plan" })
+      .getByText('Plumber visit', { exact: true })
   ).toBeVisible();
 });
