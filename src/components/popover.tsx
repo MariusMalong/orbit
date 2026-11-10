@@ -86,7 +86,7 @@ export function Popover({
       {isOpen && (
         <div
           id={panelId}
-          className={`absolute top-full z-30 mt-1 min-w-52 rounded-xl border border-line bg-surface p-1.5 text-ink shadow-lg ${panelClassName}`}
+          className={`absolute top-full z-30 mt-1 min-w-52 rounded-xl border border-line bg-surface p-1.5 text-ink shadow-float motion-safe:animate-pop-in ${panelClassName}`}
           onClick={(event) => {
             if ((event.target as HTMLElement).closest('[data-close]')) {
               setIsOpen(false);

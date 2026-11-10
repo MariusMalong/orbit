@@ -8,6 +8,11 @@ import { deleteUser, signInAsNewUser } from './db';
 // against WCAG 2.1 AA. A failure lists each rule broken and where.
 
 async function expectAccessible(page: Page) {
+  // Let menus and dialogs finish fading in: half-faded text fails contrast.
+  // (An animation cut short, by a dialog closing, rejects; that's fine.)
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {})))
+  );
   const { violations } = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     // Next.js's development overlay button isn't part of the app.

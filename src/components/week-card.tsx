@@ -49,7 +49,7 @@ export function WeekCard({ days, loads, leftovers, timeZone }: WeekCardProps) {
               >
                 {!day.isDayOff && (
                   <div
-                    className={`w-full bg-accent ${load.percent >= 100 ? '' : 'opacity-70'}`}
+                    className={`w-full bg-accent motion-safe:transition-[height] motion-safe:duration-500 ${load.percent >= 100 ? '' : 'opacity-70'}`}
                     style={{ height: `${load.percent}%` }}
                   />
                 )}

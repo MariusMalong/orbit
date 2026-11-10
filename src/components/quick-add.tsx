@@ -86,7 +86,7 @@ function AddSheet({ today }: QuickAddProps) {
         aria-label="Add a task or event"
         title="Add a task or event"
         onClick={() => setOpen({})}
-        className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent text-on-accent shadow-lg transition hover:bg-accent-hover focus-visible:ring-4 focus-visible:ring-accent/40 focus-visible:outline-none md:hidden"
+        className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent text-on-accent shadow-float transition motion-safe:active:scale-95 hover:bg-accent-hover focus-visible:ring-4 focus-visible:ring-accent/40 focus-visible:outline-none md:hidden"
       >
         <svg
           width="24"
@@ -175,7 +175,12 @@ function QuickAddForm({
       setMode('event');
       setEvent((e as CustomEvent<EventDraft>).detail);
       setError('');
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      formRef.current?.scrollIntoView({
+        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+        block: 'center',
+      });
       titleRef.current?.focus({ preventScroll: true });
     };
     window.addEventListener(ADD_EVENT, handleAddEvent);
@@ -238,7 +243,7 @@ function QuickAddForm({
         className={
           isSheet
             ? 'flex flex-col items-stretch gap-3'
-            : 'flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface p-2 transition focus-within:border-accent'
+            : 'flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface p-2 shadow-card transition focus-within:border-accent'
         }
       >
         <div

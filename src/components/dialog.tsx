@@ -51,9 +51,9 @@ export function Dialog({
       }}
       className={`${
         sheet
-          ? 'mx-0 mt-auto mb-0 max-h-[90dvh] w-full max-w-none rounded-t-2xl border-x-0 border-b-0'
-          : `m-auto w-[calc(100%-2rem)] ${wide ? 'max-w-xl' : 'max-w-md'} rounded-xl`
-      } border border-line bg-surface p-0 text-ink shadow-xl backdrop:bg-scrim`}
+          ? 'mx-0 mt-auto mb-0 max-h-[90dvh] w-full max-w-none rounded-t-2xl border-x-0 border-b-0 motion-safe:animate-sheet-up'
+          : `m-auto w-[calc(100%-2rem)] ${wide ? 'max-w-xl' : 'max-w-md'} rounded-xl motion-safe:animate-pop-in`
+      } border border-line bg-surface p-0 text-ink shadow-float backdrop:bg-scrim backdrop:motion-safe:animate-fade-in`}
     >
       {open && (
         <div
