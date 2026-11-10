@@ -152,9 +152,29 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await expectAccessible(page);
     });
 
-    test('Today on a phone', async ({ page }) => {
+    test('Today on a phone, with the menu and the add sheet', async ({
+      page,
+    }) => {
       await page.setViewportSize({ width: 390, height: 844 });
       await startDemo(page);
+      await expectAccessible(page);
+
+      await page.getByRole('button', { name: 'Menu' }).click();
+      await expect(
+        page.getByRole('button', { name: 'Sign out' })
+      ).toBeVisible();
+      await expectAccessible(page);
+      await page.keyboard.press('Escape');
+
+      await page.getByRole('button', { name: 'Add a task or event' }).click();
+      await expect(page.getByRole('dialog', { name: 'Add' })).toBeVisible();
+      await expectAccessible(page);
+    });
+
+    test('Week on a phone', async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await startDemo(page);
+      await page.goto('/week');
       await expectAccessible(page);
     });
 
