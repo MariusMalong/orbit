@@ -1,10 +1,11 @@
 'use client';
 
 import { ProjectSelect } from '@/components/projects-context';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { Dialog } from '@/components/dialog';
 import { createTask } from '@/app/actions/task';
 import { addCommitment } from '@/app/actions/commitments';
-import { buttonAccent } from '@/components/ui-classes';
+import { buttonAccent, fieldInput } from '@/components/ui-classes';
 import { addMinutesToClock, isAfter, nextHalfHour } from '@/lib/time/clock';
 
 /** Times for a new event, as date and time inputs expect them. */
@@ -17,8 +18,8 @@ export type EventDraft = {
 const ADD_EVENT = 'orbit:add-event';
 
 /**
- * Opens the quick-add bar in event mode with these times filled in. Used by
- * the timeline's hour labels and free slots.
+ * Opens the quick-add bar (or the add sheet, on a phone) in event mode with
+ * these times filled in. Used by the timeline's hour labels and free slots.
  */
 export function requestAddEvent(draft: EventDraft) {
   window.dispatchEvent(
@@ -38,30 +39,139 @@ function formatDuration(minutes: number) {
   return Number.isInteger(hours) ? `${hours} h` : `${hours.toFixed(1)} h`;
 }
 
+/** Whether an element is on screen (not inside something display: none). */
+const isShown = (element: Element | null) =>
+  !!element && element.getClientRects().length > 0;
+
 interface QuickAddProps {
   today: string; // Today's date in the visitor's timezone, "2026-11-06"
 }
 
 /**
- * One bar for adding both tasks and events, at the top of the dashboard.
- * Tasks need a title, an estimate and a priority; events a title and a time.
+ * Adding tasks and events. From tablet width up it's a bar at the top of the
+ * page; on a phone it's a floating + button that opens the same form in a
+ * sheet from the bottom of the screen, near the thumb.
  */
 export function QuickAdd({ today }: QuickAddProps) {
-  const [mode, setMode] = useState<'task' | 'event'>('task');
+  return (
+    <>
+      <div className="hidden md:block">
+        <QuickAddForm today={today} variant="bar" />
+      </div>
+      <AddSheet today={today} />
+    </>
+  );
+}
+
+function AddSheet({ today }: QuickAddProps) {
+  // Null while closed; the event to fill in when the timeline opened it.
+  const [open, setOpen] = useState<{ event?: EventDraft } | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // On a phone, a tap on the timeline's free time opens the sheet.
+  useEffect(() => {
+    const handleAddEvent = (e: Event) => {
+      if (!isShown(buttonRef.current)) return;
+      setOpen({ event: (e as CustomEvent<EventDraft>).detail });
+    };
+    window.addEventListener(ADD_EVENT, handleAddEvent);
+    return () => window.removeEventListener(ADD_EVENT, handleAddEvent);
+  }, []);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label="Add a task or event"
+        title="Add a task or event"
+        onClick={() => setOpen({})}
+        className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent text-on-accent shadow-lg transition hover:bg-accent-hover focus-visible:ring-4 focus-visible:ring-accent/40 focus-visible:outline-none md:hidden"
+      >
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
+
+      <Dialog
+        open={open !== null}
+        onClose={() => setOpen(null)}
+        labelledBy="add-sheet-title"
+        sheet
+      >
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2
+            id="add-sheet-title"
+            className="font-display text-lg font-semibold text-ink"
+          >
+            Add
+          </h2>
+          <button
+            type="button"
+            onClick={() => setOpen(null)}
+            className="inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-muted hover:bg-subtle hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+          >
+            Cancel
+          </button>
+        </div>
+        <QuickAddForm
+          today={today}
+          variant="sheet"
+          initialEvent={open?.event}
+          onAdded={() => setOpen(null)}
+        />
+      </Dialog>
+    </>
+  );
+}
+
+interface QuickAddFormProps extends QuickAddProps {
+  variant: 'bar' | 'sheet';
+  /** Start in event mode with these times. */
+  initialEvent?: EventDraft;
+  /** After something's been added. */
+  onAdded?: () => void;
+}
+
+/**
+ * One form for adding both tasks and events. Tasks need a title, an estimate
+ * and a priority; events a title and a time.
+ */
+function QuickAddForm({
+  today,
+  variant,
+  initialEvent,
+  onAdded,
+}: QuickAddFormProps) {
+  const [mode, setMode] = useState<'task' | 'event'>(
+    initialEvent ? 'event' : 'task'
+  );
   const [title, setTitle] = useState('');
   const [showDue, setShowDue] = useState(false);
-  const [event, setEvent] = useState<EventDraft>({
-    date: today,
-    start: '09:00',
-    end: '10:00',
-  });
+  const [event, setEvent] = useState<EventDraft>(
+    initialEvent ?? { date: today, start: '09:00', end: '10:00' }
+  );
   const [error, setError] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
+  const id = useId();
+  const isSheet = variant === 'sheet';
 
-  // A click on the timeline asks for an event at a particular time.
+  // A click on the timeline asks for an event at a particular time. (On a
+  // phone the bar is hidden, and the sheet answers instead.)
   useEffect(() => {
+    if (isSheet) return;
     const handleAddEvent = (e: Event) => {
+      if (!isShown(formRef.current)) return;
       setMode('event');
       setEvent((e as CustomEvent<EventDraft>).detail);
       setError('');
@@ -70,7 +180,7 @@ export function QuickAdd({ today }: QuickAddProps) {
     };
     window.addEventListener(ADD_EVENT, handleAddEvent);
     return () => window.removeEventListener(ADD_EVENT, handleAddEvent);
-  }, []);
+  }, [isSheet]);
 
   function switchToEvent() {
     if (mode === 'event') return;
@@ -98,7 +208,8 @@ export function QuickAdd({ today }: QuickAddProps) {
       await addCommitment(formData);
     }
     setTitle('');
-    titleRef.current?.focus();
+    if (onAdded) onAdded();
+    else titleRef.current?.focus();
   }
 
   const modeButton = (value: 'task' | 'event', label: string) => (
@@ -123,22 +234,28 @@ export function QuickAdd({ today }: QuickAddProps) {
       aria-label="Quick add"
       className="flex flex-col gap-1"
     >
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface p-2 transition focus-within:border-accent">
+      <div
+        className={
+          isSheet
+            ? 'flex flex-col items-stretch gap-3'
+            : 'flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface p-2 transition focus-within:border-accent'
+        }
+      >
         <div
           role="group"
           aria-label="Add a"
-          className="flex gap-0.5 rounded-lg bg-subtle p-1"
+          className={`flex gap-0.5 rounded-lg bg-subtle p-1 ${isSheet ? '[&>button]:flex-1' : ''}`}
         >
           {modeButton('task', 'Task')}
           {modeButton('event', 'Event')}
         </div>
 
-        <label htmlFor="quick-add-title" className="sr-only">
+        <label htmlFor={`${id}-title`} className="sr-only">
           {mode === 'task' ? 'Task title' : 'Event title'}
         </label>
         <input
           ref={titleRef}
-          id="quick-add-title"
+          id={`${id}-title`}
           name="title"
           type="text"
           required
@@ -147,16 +264,21 @@ export function QuickAdd({ today }: QuickAddProps) {
           placeholder={
             mode === 'task' ? 'What do you need to do?' : "What's on?"
           }
-          className="min-h-11 min-w-0 flex-[1_1_220px] bg-transparent px-2 text-[15px] text-ink outline-none placeholder:text-muted"
+          data-autofocus={isSheet || undefined}
+          className={
+            isSheet
+              ? `${fieldInput} text-base`
+              : 'min-h-11 min-w-0 flex-[1_1_220px] bg-transparent px-2 text-[15px] text-ink outline-none placeholder:text-muted'
+          }
         />
 
         {mode === 'task' ? (
           <div className="flex flex-wrap items-center gap-2">
-            <label htmlFor="quick-add-duration" className="sr-only">
+            <label htmlFor={`${id}-duration`} className="sr-only">
               Time estimate
             </label>
             <select
-              id="quick-add-duration"
+              id={`${id}-duration`}
               name="durationEstimate"
               defaultValue="30"
               className={chip}
@@ -168,11 +290,11 @@ export function QuickAdd({ today }: QuickAddProps) {
               ))}
             </select>
 
-            <label htmlFor="quick-add-priority" className="sr-only">
+            <label htmlFor={`${id}-priority`} className="sr-only">
               Priority
             </label>
             <select
-              id="quick-add-priority"
+              id={`${id}-priority`}
               name="priority"
               defaultValue="2"
               className={chip}
@@ -182,15 +304,15 @@ export function QuickAdd({ today }: QuickAddProps) {
               <option value="3">High priority</option>
             </select>
 
-            <ProjectSelect id="quick-add-project" hideLabel className={chip} />
+            <ProjectSelect id={`${id}-project`} hideLabel className={chip} />
 
             {showDue ? (
               <>
-                <label htmlFor="quick-add-due" className="sr-only">
+                <label htmlFor={`${id}-due`} className="sr-only">
                   Due
                 </label>
                 <input
-                  id="quick-add-due"
+                  id={`${id}-due`}
                   name="deadline"
                   type="datetime-local"
                   autoFocus
@@ -209,11 +331,11 @@ export function QuickAdd({ today }: QuickAddProps) {
           </div>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
-            <label htmlFor="quick-add-date" className="sr-only">
+            <label htmlFor={`${id}-date`} className="sr-only">
               Date
             </label>
             <input
-              id="quick-add-date"
+              id={`${id}-date`}
               type="date"
               required
               min={today}
@@ -221,11 +343,11 @@ export function QuickAdd({ today }: QuickAddProps) {
               onChange={(e) => setEvent({ ...event, date: e.target.value })}
               className={chip}
             />
-            <label htmlFor="quick-add-start" className="sr-only">
+            <label htmlFor={`${id}-start`} className="sr-only">
               Starts
             </label>
             <input
-              id="quick-add-start"
+              id={`${id}-start`}
               type="time"
               required
               value={event.start}
@@ -242,11 +364,11 @@ export function QuickAdd({ today }: QuickAddProps) {
               className={chip}
             />
             <span className="text-sm text-muted">to</span>
-            <label htmlFor="quick-add-end" className="sr-only">
+            <label htmlFor={`${id}-end`} className="sr-only">
               Ends
             </label>
             <input
-              id="quick-add-end"
+              id={`${id}-end`}
               type="time"
               required
               value={event.end}
@@ -266,7 +388,10 @@ export function QuickAdd({ today }: QuickAddProps) {
           </div>
         )}
 
-        <button type="submit" className={`${buttonAccent} ml-auto px-5`}>
+        <button
+          type="submit"
+          className={`${buttonAccent} px-5 ${isSheet ? 'w-full' : 'ml-auto'}`}
+        >
           Add
         </button>
       </div>
