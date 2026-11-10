@@ -97,7 +97,7 @@ export function WeekBoard({
             className={`flex min-w-0 flex-col gap-1.5 rounded-xl border p-2.5 transition data-[drop-target]:ring-2 data-[drop-target]:ring-accent lg:min-h-[28rem] ${
               day.isDayOff
                 ? 'border-dashed border-line bg-transparent'
-                : `bg-surface ${i === 0 ? 'border-accent' : 'border-line'}`
+                : `bg-surface shadow-card ${i === 0 ? 'border-accent' : 'border-line'}`
             }`}
           >
             <div className="border-b border-line-soft px-0.5 pb-2">
@@ -117,7 +117,7 @@ export function WeekBoard({
                 title={`${load.percent}% full, ${formatMinutes(load.busyMinutes)} busy`}
               >
                 <div
-                  className={`h-full rounded-full bg-accent ${load.percent >= 100 ? '' : 'opacity-70'}`}
+                  className={`h-full rounded-full bg-accent motion-safe:transition-[width] motion-safe:duration-500 ${load.percent >= 100 ? '' : 'opacity-70'}`}
                   style={{ width: `${load.percent}%` }}
                 />
               </div>

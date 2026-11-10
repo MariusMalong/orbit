@@ -16,6 +16,7 @@ export type EventDraft = {
 };
 
 const ADD_EVENT = 'orbit:add-event';
+const ADD_TASK = 'orbit:add-task';
 
 /**
  * Opens the quick-add bar (or the add sheet, on a phone) in event mode with
@@ -37,6 +38,14 @@ function formatDuration(minutes: number) {
   if (minutes < 60) return `${minutes} min`;
   const hours = minutes / 60;
   return Number.isInteger(hours) ? `${hours} h` : `${hours.toFixed(1)} h`;
+}
+
+/**
+ * Opens the add form for a task: focuses the bar, or opens the sheet on a
+ * phone. Used by the empty states' "Add a task" buttons.
+ */
+export function requestAddTask() {
+  window.dispatchEvent(new Event(ADD_TASK));
 }
 
 /** Whether an element is on screen (not inside something display: none). */
@@ -74,8 +83,15 @@ function AddSheet({ today }: QuickAddProps) {
       if (!isShown(buttonRef.current)) return;
       setOpen({ event: (e as CustomEvent<EventDraft>).detail });
     };
+    const handleAddTask = () => {
+      if (isShown(buttonRef.current)) setOpen({});
+    };
     window.addEventListener(ADD_EVENT, handleAddEvent);
-    return () => window.removeEventListener(ADD_EVENT, handleAddEvent);
+    window.addEventListener(ADD_TASK, handleAddTask);
+    return () => {
+      window.removeEventListener(ADD_EVENT, handleAddEvent);
+      window.removeEventListener(ADD_TASK, handleAddTask);
+    };
   }, []);
 
   return (
@@ -86,7 +102,7 @@ function AddSheet({ today }: QuickAddProps) {
         aria-label="Add a task or event"
         title="Add a task or event"
         onClick={() => setOpen({})}
-        className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent text-on-accent shadow-lg transition hover:bg-accent-hover focus-visible:ring-4 focus-visible:ring-accent/40 focus-visible:outline-none md:hidden"
+        className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-accent text-on-accent shadow-float transition hover:bg-accent-hover focus-visible:ring-4 focus-visible:ring-accent/40 focus-visible:outline-none motion-safe:active:scale-95 md:hidden"
       >
         <svg
           width="24"
@@ -166,8 +182,9 @@ function QuickAddForm({
   const id = useId();
   const isSheet = variant === 'sheet';
 
-  // A click on the timeline asks for an event at a particular time. (On a
-  // phone the bar is hidden, and the sheet answers instead.)
+  // A click on the timeline asks for an event at a particular time, and an
+  // empty state's button for a task. (On a phone the bar is hidden, and the
+  // sheet answers instead.)
   useEffect(() => {
     if (isSheet) return;
     const handleAddEvent = (e: Event) => {
@@ -175,11 +192,26 @@ function QuickAddForm({
       setMode('event');
       setEvent((e as CustomEvent<EventDraft>).detail);
       setError('');
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      formRef.current?.scrollIntoView({
+        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+        block: 'center',
+      });
       titleRef.current?.focus({ preventScroll: true });
     };
+    const handleAddTask = () => {
+      if (!isShown(formRef.current)) return;
+      setMode('task');
+      setError('');
+      titleRef.current?.focus();
+    };
     window.addEventListener(ADD_EVENT, handleAddEvent);
-    return () => window.removeEventListener(ADD_EVENT, handleAddEvent);
+    window.addEventListener(ADD_TASK, handleAddTask);
+    return () => {
+      window.removeEventListener(ADD_EVENT, handleAddEvent);
+      window.removeEventListener(ADD_TASK, handleAddTask);
+    };
   }, [isSheet]);
 
   function switchToEvent() {
@@ -238,7 +270,7 @@ function QuickAddForm({
         className={
           isSheet
             ? 'flex flex-col items-stretch gap-3'
-            : 'flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface p-2 transition focus-within:border-accent'
+            : 'flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface p-2 shadow-card transition focus-within:border-accent'
         }
       >
         <div
@@ -429,6 +461,19 @@ export function AddEventButton({
       style={style}
     >
       {children}
+    </button>
+  );
+}
+
+/** Opens the add form for a new task. */
+export function AddTaskButton() {
+  return (
+    <button
+      type="button"
+      onClick={requestAddTask}
+      className={`${buttonAccent} mt-2`}
+    >
+      Add a task
     </button>
   );
 }

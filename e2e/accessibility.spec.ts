@@ -8,6 +8,11 @@ import { deleteUser, signInAsNewUser } from './db';
 // against WCAG 2.1 AA. A failure lists each rule broken and where.
 
 async function expectAccessible(page: Page) {
+  // Let menus and dialogs finish fading in: half-faded text fails contrast.
+  // (An animation cut short, by a dialog closing, rejects; that's fine.)
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {})))
+  );
   const { violations } = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     // Next.js's development overlay button isn't part of the app.
@@ -176,6 +181,28 @@ for (const colorScheme of ['light', 'dark'] as const) {
       await startDemo(page);
       await page.goto('/week');
       await expectAccessible(page);
+    });
+
+    test('empty Today for a new account, on a computer and a phone', async ({
+      page,
+      context,
+      baseURL,
+    }) => {
+      const userId = await signInAsNewUser(context, baseURL!);
+      try {
+        await page.goto('/welcome');
+        await page.getByRole('button', { name: 'Skip for now' }).click();
+        await expect(page.getByText('No open tasks')).toBeVisible();
+        await expectAccessible(page);
+
+        await page.setViewportSize({ width: 390, height: 844 });
+        await expect(
+          page.getByText('Nothing else planned today')
+        ).toBeVisible();
+        await expectAccessible(page);
+      } finally {
+        await deleteUser(userId);
+      }
     });
 
     test('welcome page', async ({ page, context, baseURL }) => {

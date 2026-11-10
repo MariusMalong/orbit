@@ -25,8 +25,12 @@ test('adds a task from the quick-add bar', async ({ page }) => {
 });
 
 test('marks a task as done from its menu', async ({ page }) => {
-  const summary = page.getByText(/\d+ of \d+ done/);
-  await expect(summary).toContainText('1 of 8 done');
+  // The second of the day's stats: tasks done.
+  const summary = page
+    .getByRole('region', { name: 'Today so far' })
+    .getByRole('definition')
+    .nth(1);
+  await expect(summary).toHaveText('1 of 8');
 
   await page
     .getByRole('button', { name: 'More for Read the onboarding guide' })
@@ -36,7 +40,7 @@ test('marks a task as done from its menu', async ({ page }) => {
   await expect(
     page.getByRole('button', { name: 'More for Read the onboarding guide' })
   ).toHaveCount(0);
-  await expect(summary).toContainText('2 of 8 done');
+  await expect(summary).toHaveText('2 of 8');
 });
 
 test('edits a task in the dialog', async ({ page }) => {
@@ -58,7 +62,7 @@ test('edits a task in the dialog', async ({ page }) => {
 });
 
 test('starts and stops a focus timer', async ({ page }) => {
-  const summary = page.getByText(/focused ·/);
+  const summary = page.getByRole('region', { name: 'Today so far' });
   const before = await summary.innerText();
 
   await page

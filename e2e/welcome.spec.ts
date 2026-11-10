@@ -75,5 +75,5 @@ test('can be skipped', async ({ page }) => {
   await page.getByRole('button', { name: 'Skip for now' }).click();
 
   await expect(page).toHaveURL('/');
-  await expect(page.getByText('No open tasks. Add one above')).toBeVisible();
+  await expect(page.getByText('No open tasks', { exact: true })).toBeVisible();
 });

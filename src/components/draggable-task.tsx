@@ -260,7 +260,7 @@ function useDragToPlace({
 const touchClasses = 'select-none [-webkit-touch-callout:none]';
 
 const dragClasses = (isDragging: boolean, isPending: boolean) =>
-  `${touchClasses} ${isDragging ? 'cursor-grabbing opacity-90 shadow-lg' : ''} ${isPending ? 'opacity-70' : ''}`;
+  `${touchClasses} ${isDragging ? 'cursor-grabbing opacity-90 shadow-float' : ''} ${isPending ? 'opacity-70' : ''}`;
 
 interface TimelineDragProps {
   taskId: string;
