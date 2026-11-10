@@ -23,13 +23,26 @@ import { movedStart, startOnDay } from '@/lib/planning/move';
 //
 // Near the top or bottom of the window the page scrolls, so a task can be
 // dragged to a day that's off screen (the Week board is a long list on a
-// phone).
+// phone). The edges are where the page shows: below the sticky header, and
+// above the phone's tab bar.
 
 const DRAG_THRESHOLD_PX = 5;
 const LONG_PRESS_MS = 400;
 const TOUCH_SLOP_PX = 8; // A finger moving more than this before the hold is scrolling
 const EDGE_PX = 64; // How close to the window's edge auto-scrolling starts
 const MAX_SCROLL_PX = 14; // Per frame, right at the edge
+
+/** The part of the window the page shows, between the header and the tab bar. */
+function visibleBand() {
+  const bar = document.querySelector('[data-tab-bar]');
+  const barRect = bar?.getBoundingClientRect();
+  return {
+    top:
+      document.querySelector('[data-app-header]')?.getBoundingClientRect()
+        .bottom ?? 0,
+    bottom: barRect && barRect.height > 0 ? barRect.top : window.innerHeight,
+  };
+}
 
 type Offset = { x: number; y: number };
 /** Where the pointer is, in the window. */
@@ -98,6 +111,7 @@ function useDragToPlace({
     let point: Point = { clientX: down.clientX, clientY: down.clientY };
     let held = !isTouch; // A mouse can drag straight away; a finger after holding
     let frame = 0;
+    let band = { top: 0, bottom: window.innerHeight };
 
     const offsetOf = (): Offset => ({
       x: axis === 'y' ? 0 : point.clientX - origin.x,
@@ -111,12 +125,16 @@ function useDragToPlace({
     };
 
     const autoScroll = () => {
-      const fromBottom = window.innerHeight - point.clientY;
+      const fromTop = point.clientY - band.top;
+      const fromBottom = band.bottom - point.clientY;
+      // Past the edge (over the header or tab bar) is full speed.
       const speed = (distance: number) =>
-        Math.ceil(((EDGE_PX - distance) / EDGE_PX) * MAX_SCROLL_PX);
+        Math.ceil(
+          ((EDGE_PX - Math.max(distance, 0)) / EDGE_PX) * MAX_SCROLL_PX
+        );
       const dy =
-        point.clientY < EDGE_PX
-          ? -speed(point.clientY)
+        fromTop < EDGE_PX
+          ? -speed(fromTop)
           : fromBottom < EDGE_PX
             ? speed(fromBottom)
             : 0;
@@ -131,6 +149,7 @@ function useDragToPlace({
       dragging.current = true;
       setIsLifted(true);
       document.body.style.userSelect = 'none';
+      band = visibleBand();
       update();
       frame = requestAnimationFrame(autoScroll);
     };

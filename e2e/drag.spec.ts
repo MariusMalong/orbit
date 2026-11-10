@@ -148,12 +148,16 @@ test.describe('on a touch screen', () => {
     isMobile: true,
   });
 
-  /** A finger on `item` that waits `holdMs`, then slides down by `dy`. */
+  /**
+   * A finger on `item` that waits `holdMs`, slides down by `dy`, and stays
+   * there for `restMs` before lifting.
+   */
   async function touchDrag(
     page: Page,
     item: Locator,
     holdMs: number,
-    dy: number
+    dy: number,
+    restMs = 0
   ) {
     const cdp: CDPSession = await page.context().newCDPSession(page);
     const box = (await item.boundingBox())!;
@@ -169,6 +173,7 @@ test.describe('on a touch screen', () => {
     for (let step = 1; step <= 10; step++) {
       await touch('touchMove', [{ x, y: y + (dy * step) / 10 }]);
     }
+    await page.waitForTimeout(restMs);
     await touch('touchEnd', []);
     await cdp.detach();
   }
@@ -179,7 +184,8 @@ test.describe('on a touch screen', () => {
 
     const plan = page.getByRole('region', { name: "Today's plan" });
     const block = plan.getByRole('button', { name: /^Write report/ });
-    await block.scrollIntoViewIfNeeded();
+    // In the middle of the screen, clear of where auto-scrolling starts.
+    await block.evaluate((el) => el.scrollIntoView({ block: 'center' }));
     const before = minutesOfDay((await block.textContent())!);
 
     await touchDrag(page, block, 600, 160); // Two hours down
@@ -205,5 +211,27 @@ test.describe('on a touch screen', () => {
     const saved = await prisma.task.findFirstOrThrow({ where: { userId } });
     expect(saved.plannedStart).toBeNull();
     await expect(block).not.toContainText('Your time');
+  });
+
+  test('dragging near the tab bar scrolls the page', async ({
+    page,
+    baseURL,
+  }) => {
+    await signInWithOneTask(page, baseURL!);
+    await page.goto('/');
+
+    const plan = page.getByRole('region', { name: "Today's plan" });
+    const block = plan.getByRole('button', { name: /^Write report/ });
+    await block.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+    const tabBar = page.getByRole('navigation', { name: 'Views' });
+    const barTop = (await tabBar.boundingBox())!.y;
+    const fingerY = (await block.boundingBox())!.y + 12;
+    const scrolledBefore = await page.evaluate(() => window.scrollY);
+
+    // Just above the tab bar, where the page still shows.
+    await touchDrag(page, block, 600, barTop - 30 - fingerY, 500);
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(
+      scrolledBefore + 50
+    );
   });
 });

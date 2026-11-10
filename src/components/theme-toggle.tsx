@@ -14,7 +14,14 @@ const LABELS: Record<Theme, string> = {
  * in a cookie so the server renders the right theme on the next visit, and is
  * applied straight away by setting data-theme on <html> (see globals.css).
  */
-export function ThemeToggle({ initialTheme }: { initialTheme: Theme }) {
+export function ThemeToggle({
+  initialTheme,
+  variant = 'pill',
+}: {
+  initialTheme: Theme;
+  /** A pill in the header, or a full-width row in the phone's menu. */
+  variant?: 'pill' | 'menu';
+}) {
   const [theme, setTheme] = useState(initialTheme);
 
   function handleClick() {
@@ -34,10 +41,18 @@ export function ThemeToggle({ initialTheme }: { initialTheme: Theme }) {
       onClick={handleClick}
       aria-label={`Theme: ${LABELS[theme]}. Switch to ${LABELS[nextTheme(theme)]}.`}
       title={`Theme: ${LABELS[theme]}`}
-      className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-subtle px-3 text-sm font-medium text-ink transition hover:border-muted focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none"
+      className={
+        variant === 'menu'
+          ? 'flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-ink transition hover:bg-subtle focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none'
+          : 'inline-flex min-h-11 items-center gap-2 rounded-full border border-line bg-subtle px-3 text-sm font-medium text-ink transition hover:border-muted focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none'
+      }
     >
       <ThemeIcon theme={theme} />
-      <span className="hidden sm:inline">{LABELS[theme]}</span>
+      {variant === 'menu' ? (
+        <span>Theme: {LABELS[theme]}</span>
+      ) : (
+        <span className="hidden sm:inline">{LABELS[theme]}</span>
+      )}
     </button>
   );
 }

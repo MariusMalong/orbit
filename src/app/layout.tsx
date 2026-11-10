@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import './globals.css';
-import { AuthButton } from '@/components/auth-button';
-import { MainNav } from '@/components/main-nav';
-import { ThemeToggle } from '@/components/theme-toggle';
+import { HeaderAccount } from '@/components/header-account';
+import { MainNav, TabBar } from '@/components/main-nav';
 import { TimezoneSync } from '@/components/timezone-sync';
 import { parseTheme, THEME_COOKIE } from '@/lib/theme';
 
@@ -22,6 +21,12 @@ export const metadata: Metadata = {
   description: 'Adaptive daily planning and task management.',
 };
 
+// Lets the page reach under a phone's home indicator, so the tab bar can sit
+// at the very bottom and pad itself clear of it (env(safe-area-inset-bottom)).
+export const viewport: Viewport = {
+  viewportFit: 'cover',
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -36,10 +41,13 @@ export default async function RootLayout({
       className={`${inter.variable} ${spaceGrotesk.variable}`}
       data-theme={theme === 'system' ? undefined : theme}
     >
-      <body className="flex min-h-screen flex-col bg-canvas font-sans text-ink antialiased">
+      <body className="flex min-h-screen flex-col bg-canvas pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] font-sans text-ink antialiased">
         <TimezoneSync />
-        <header className="sticky top-0 z-50 border-b border-line bg-surface">
-          <div className="mx-auto flex min-h-16 w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-4 md:px-6">
+        <header
+          data-app-header
+          className="sticky top-0 z-50 border-b border-line bg-surface pt-[env(safe-area-inset-top)]"
+        >
+          <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 md:px-6">
             <div className="flex items-center gap-5 sm:gap-7">
               <div className="flex items-center gap-2.5">
                 <svg
@@ -66,10 +74,7 @@ export default async function RootLayout({
               </div>
               <MainNav />
             </div>
-            <div className="flex items-center gap-3">
-              <ThemeToggle initialTheme={theme} />
-              <AuthButton />
-            </div>
+            <HeaderAccount theme={theme} />
           </div>
         </header>
         <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-8 md:px-6">
@@ -80,6 +85,7 @@ export default async function RootLayout({
             Privacy policy
           </Link>
         </footer>
+        <TabBar />
       </body>
     </html>
   );
