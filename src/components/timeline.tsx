@@ -4,7 +4,7 @@ import {
   ScheduleBlockResult,
   SchedulableTask,
 } from '@/lib/engine/scheduler';
-import { formatClock, PRIORITY_LABELS } from '@/lib/format';
+import { formatClock } from '@/lib/format';
 import { getZonedParts } from '@/lib/time/zoned';
 import { addMinutesToClock, toDateKey } from '@/lib/time/clock';
 import { panel } from '@/components/ui-classes';
@@ -36,7 +36,7 @@ interface TimelineProps {
 }
 
 // Vertical scale of the calendar grid.
-const HOUR_HEIGHT_PX = 64;
+const HOUR_HEIGHT_PX = 80;
 const PX_PER_MINUTE = HOUR_HEIGHT_PX / 60;
 const MS_PER_MINUTE = 60_000;
 const MS_PER_HOUR = 3_600_000;
@@ -150,11 +150,15 @@ export function Timeline({
           </h2>
           <p className="mt-0.5 text-sm text-muted">
             {planStart > workDayStart && !dayIsOver && !isDayOff
-              ? `Planned from ${formatClock(planStart, timeZone)}. `
+              ? `Planned from ${formatClock(planStart, timeZone)} · `
               : ''}
-            Click an hour or a free slot to add an event, or a block to change
-            it. Drag a task to move it (on a touch screen, press and hold it
-            first).
+            {/* The one gesture that isn't discoverable, worded per device. */}
+            <span className="pointer-coarse:hidden">
+              Drag a task to move it
+            </span>
+            <span className="hidden pointer-coarse:inline">
+              Press and hold a task to move it
+            </span>
           </p>
         </div>
         <div className="shrink-0">{headerAction}</div>
@@ -276,7 +280,7 @@ export function Timeline({
                       {time} · {c.repeatsWeekly ? 'Weekly' : 'Fixed'}
                     </span>
                   ) : (
-                    // Too short to show the time, so screen readers still get it.
+                    // Too short to show the details, so screen readers still get them.
                     <span className="sr-only">
                       , {time} · {c.repeatsWeekly ? 'Weekly' : 'Fixed'}
                     </span>
@@ -301,7 +305,8 @@ export function Timeline({
           const isCompact = height < 44;
 
           const time = `${formatClock(block.startTime, timeZone)} – ${formatClock(block.endTime, timeZone)}`;
-          const priority = PRIORITY_LABELS[task.priority] ?? '';
+          // Only high priority is called out, as in the task list.
+          const isHigh = task.priority === 3;
 
           const placed = task.plannedStart ? ' · Your time' : '';
           const project = projectOf[task.id];
@@ -331,26 +336,36 @@ export function Timeline({
                   />
                 }
                 className="relative h-full"
-                triggerClassName={`flex h-full w-full cursor-pointer items-start justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 text-left ${blockStripe(project?.color)} transition hover:brightness-[0.97] focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${isCompact ? 'py-1' : 'py-2.5'}`}
+                triggerClassName={`flex h-full w-full cursor-pointer justify-between gap-3 overflow-hidden rounded-lg bg-accent-tint px-4 text-left ${blockStripe(project?.color)} transition hover:brightness-[0.97] focus-visible:ring-2 focus-visible:ring-accent/60 focus-visible:outline-none ${isCompact ? 'items-center py-0.5' : 'items-start py-2.5'}`}
                 trigger={
                   <>
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-semibold">
-                        {task.title}
-                      </span>
-                      {isCompact ? (
-                        <span className="sr-only">
-                          , {time} · {minutes} min{placed}
+                    {isCompact ? (
+                      // Too short for two lines: the time goes beside the title.
+                      <span className="flex min-w-0 items-baseline gap-2">
+                        <span className="truncate text-sm font-semibold">
+                          {task.title}
                         </span>
-                      ) : (
+                        <span className="shrink-0 text-xs text-ink-2 tabular-nums">
+                          {time}
+                          <span className="sr-only">
+                            {' '}
+                            · {minutes} min{placed}
+                          </span>
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold">
+                          {task.title}
+                        </span>
                         <span className="block text-xs text-ink-2">
                           {time} · {minutes} min{placed}
                         </span>
-                      )}
-                    </span>
-                    {priority && !isCompact && (
-                      <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-medium">
-                        {priority}
+                      </span>
+                    )}
+                    {isHigh && (
+                      <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-semibold">
+                        High<span className="sr-only"> priority</span>
                       </span>
                     )}
                     <span className="sr-only">

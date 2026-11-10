@@ -133,6 +133,28 @@ describe.each(visits)('buildDemoData, visiting %s', (_, now) => {
     expect(usedDays.has(3)).toBe(true); // Monday
   });
 
+  it('has the grant application late whatever the day of the week', () => {
+    // A week of mornings, Monday 2 Nov to Sunday 8 Nov 2026, 10:20 in Melbourne.
+    for (let day = 2; day <= 8; day++) {
+      const morning = new Date(`2026-11-0${day}T10:20:00+11:00`);
+      const data = buildDemoData(morning, timeZone);
+      const plan = generateMultiDaySchedule(
+        data.tasks
+          .filter((t) => t.status !== 'COMPLETED')
+          .map((t) => ({ ...t, id: t.title })),
+        data.commitments.map((c) => ({ start: c.startTime, end: c.endTime })),
+        buildPlanningDays(
+          morning,
+          timeZone,
+          Object.fromEntries(data.availability.map((a) => [a.dayOfWeek, a]))
+        )
+      );
+      expect(plan.lateTaskIds, morning.toISOString()).toEqual([
+        'Submit the grant application',
+      ]);
+    }
+  });
+
   it('splits at least one task around a commitment', () => {
     const { result } = scheduleDemo(now);
     const blocksPerTask = new Map<string, number>();
