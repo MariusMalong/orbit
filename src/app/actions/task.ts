@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
 import { parseDateTimeLocal } from '@/lib/time/zoned';
+import { stopFocusFor } from '@/lib/focus-store';
 
 // The optional "Due" field: empty means no deadline. Like commitments, the
 // datetime-local value is a wall-clock time in the visitor's timezone.
@@ -101,6 +102,9 @@ export async function completeTask(formData: FormData) {
 
   // 2. Extract Task ID
   const taskId = formData.get('taskId') as string;
+
+  // A timer running on it stops, and the time so far is logged.
+  await stopFocusFor(session.user.id, taskId);
 
   // 3. Securely update the task status
   await prisma.task.updateMany({

@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { logTimeEntry } from '@/app/actions/time-entry';
+import { startFocus, stopFocus } from '@/app/actions/time-entry';
 
 type ActiveFocus = { taskId: string; startedAt: Date };
 
@@ -19,11 +19,32 @@ const FocusContext = createContext<FocusState | null>(null);
  * One focus timer for the whole page, so every Start focus button for a task
  * (in the task list and in the Now card) shows the same running timer.
  * Starting focus on another task stops and logs the current one first.
+ *
+ * The timer itself is kept on the server (see actions/time-entry.ts), so
+ * `running` is the one the page found when it loaded. Buttons change straight
+ * away, before the server has answered.
  */
-export function FocusProvider({ children }: { children: React.ReactNode }) {
-  const [active, setActive] = useState<ActiveFocus | null>(null);
+export function FocusProvider({
+  running,
+  children,
+}: {
+  running: ActiveFocus | null;
+  children: React.ReactNode;
+}) {
+  const [active, setActive] = useState<ActiveFocus | null>(running);
   const [savingTaskId, setSavingTaskId] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+
+  // Follow the server when the page is redrawn: for example, marking a task
+  // done stops its timer.
+  const runningKey = running
+    ? `${running.taskId}@${running.startedAt.getTime()}`
+    : '';
+  const [seenKey, setSeenKey] = useState(runningKey);
+  if (runningKey !== seenKey) {
+    setSeenKey(runningKey);
+    setActive(running);
+  }
 
   // Tick once a second while a timer runs. The elapsed time is worked out
   // from the start time, so it stays right even if a tick is delayed.
@@ -35,30 +56,21 @@ export function FocusProvider({ children }: { children: React.ReactNode }) {
 
   async function stop() {
     if (!active) return;
-    const endTime = new Date();
-    const seconds = (endTime.getTime() - active.startedAt.getTime()) / 1000;
-    // Whole minutes, and at least one, so a short session still counts.
-    const durationMinutes = Math.max(1, Math.round(seconds / 60));
-
     setActive(null);
     setSavingTaskId(active.taskId);
-
-    const formData = new FormData();
-    formData.append('taskId', active.taskId);
-    formData.append('durationMinutes', durationMinutes.toString());
-    formData.append('startTime', active.startedAt.toISOString());
-    formData.append('endTime', endTime.toISOString());
     try {
-      await logTimeEntry(formData);
+      await stopFocus();
     } finally {
       setSavingTaskId(null);
     }
   }
 
   async function start(taskId: string) {
-    if (active) await stop();
     setNow(Date.now());
     setActive({ taskId, startedAt: new Date() });
+    const formData = new FormData();
+    formData.set('taskId', taskId);
+    await startFocus(formData); // Stops and logs any other timer first
   }
 
   const elapsedSeconds = active

@@ -84,3 +84,43 @@ test('starts and stops a focus timer', async ({ page }) => {
     })
   ).toBeVisible();
 });
+
+test('a running focus timer survives leaving the page', async ({ page }) => {
+  const task = 'Book flights for the conference';
+  await page.getByRole('button', { name: `Start focus on ${task}` }).click();
+  const stop = page.getByRole('button', { name: `Stop focus on ${task}` });
+  await expect(stop).toBeVisible();
+  await page.waitForLoadState('networkidle'); // The server has the timer
+
+  // Off to the Week page and back, then a reload: still running.
+  await page.getByRole('link', { name: 'Week', exact: true }).click();
+  await expect(page).toHaveURL('/week');
+  await page.getByRole('link', { name: 'Today', exact: true }).click();
+  await expect(stop).toBeVisible();
+  await page.reload();
+  await expect(stop).toBeVisible();
+
+  await stop.click();
+  await expect(
+    page.getByRole('button', { name: `Start focus on ${task}` })
+  ).toBeVisible();
+  await page.reload();
+  await expect(stop).toHaveCount(0);
+});
+
+test('marking a task done stops its focus timer', async ({ page }) => {
+  const task = 'Book flights for the conference';
+  await page.getByRole('button', { name: `Start focus on ${task}` }).click();
+  await page.waitForLoadState('networkidle');
+
+  await page.getByRole('button', { name: `More for ${task}` }).click();
+  await page.getByRole('button', { name: 'Mark as done', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: `More for ${task}` })
+  ).toHaveCount(0);
+
+  await page.reload();
+  await expect(
+    page.getByRole('button', { name: /^Stop focus on / })
+  ).toHaveCount(0);
+});

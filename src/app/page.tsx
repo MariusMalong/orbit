@@ -7,6 +7,7 @@ import { ComingUp } from '@/components/coming-up';
 import { DayStats } from '@/components/day-stats';
 import { QuickAdd } from '@/components/quick-add';
 import { FocusProvider } from '@/components/focus-context';
+import { findRunningFocus } from '@/lib/focus-store';
 import { NowCard, type NowItem } from '@/components/now-card';
 import { TaskList } from '@/components/task-list';
 import { ProjectsProvider } from '@/components/projects-context';
@@ -100,7 +101,7 @@ export default async function Home({
 
   // 4. Analytics: aggregate today's executed time and task completion
 
-  const [todaysEntries, completedTodayCount] = await Promise.all([
+  const [todaysEntries, completedTodayCount, runningFocus] = await Promise.all([
     // TimeEntry has no userId column, so ownership is enforced through the
     // parent Task relation. Only entries on this user's tasks can match.
     prisma.timeEntry.findMany({
@@ -117,6 +118,7 @@ export default async function Home({
         completedAt: { gte: startOfToday, lt: startOfTomorrow },
       },
     }),
+    findRunningFocus(session.user.id),
   ]);
 
   const summary = summarizeDay({
@@ -180,7 +182,14 @@ export default async function Home({
 
   return (
     <ProjectsProvider projects={projects}>
-      <FocusProvider>
+      <FocusProvider
+        running={
+          runningFocus && {
+            taskId: runningFocus.taskId,
+            startedAt: runningFocus.startTime,
+          }
+        }
+      >
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-3">
             <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
