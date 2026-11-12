@@ -51,6 +51,7 @@ jobs:
       DIRECT_URL: postgresql://postgres:password@localhost:5432/orbit?schema=public
       # Only signs this throwaway CI server's sessions.
       AUTH_SECRET: ci-only-secret-not-used-anywhere-else
+      CRON_SECRET: ci-only-cron-secret
       AUTH_TRUST_HOST: 'true'
     steps:
       - uses: actions/checkout@v4

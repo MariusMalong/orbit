@@ -201,7 +201,7 @@ export default async function Home({
             {session.user.isDemo && (
               <p className="text-sm text-muted">
                 You&apos;re in a demo account filled with sample data. Change
-                anything you like: it&apos;s deleted after 24 hours.
+                anything you like: it closes after 24 hours and is then deleted.
               </p>
             )}
           </div>
