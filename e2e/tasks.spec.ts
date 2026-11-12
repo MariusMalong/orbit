@@ -124,3 +124,43 @@ test('marking a task done stops its focus timer', async ({ page }) => {
     page.getByRole('button', { name: /^Stop focus on / })
   ).toHaveCount(0);
 });
+
+test('the server turns down a blank title', async ({ page }) => {
+  // Spaces get past the browser's "required" check.
+  await quickAddTitle(page).fill('   ');
+  await quickAddSubmit(page).click();
+  await expect(
+    page.getByRole('form', { name: 'Quick add' }).getByRole('alert')
+  ).toHaveText('Give it a title.');
+  await expect(
+    taskList(page).getByRole('listitem').filter({ hasText: /^\s*$/ })
+  ).toHaveCount(0);
+});
+
+test("the server turns down an estimate the form wouldn't allow", async ({
+  page,
+}) => {
+  await page
+    .getByRole('button', { name: 'More for Read the onboarding guide' })
+    .click();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Edit task' });
+  const estimate = dialog.getByLabel('Minutes left');
+  // As if the request were sent without the page's own checks.
+  await estimate.evaluate((input) => input.removeAttribute('min'));
+  await estimate.fill('-30');
+  await dialog.getByRole('button', { name: 'Save', exact: true }).click();
+
+  await expect(dialog.getByRole('alert')).toHaveText(
+    'The time estimate needs to be at least a minute.'
+  );
+  await expect(dialog).toBeVisible();
+
+  // Cancel, and the message is gone next time.
+  await dialog.getByRole('button', { name: 'Cancel' }).click();
+  await page
+    .getByRole('button', { name: 'More for Read the onboarding guide' })
+    .click();
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toHaveCount(0);
+});

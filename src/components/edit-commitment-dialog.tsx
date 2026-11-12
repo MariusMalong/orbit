@@ -34,16 +34,23 @@ export function EditCommitmentDialog({
   const headingId = `${uid}-heading`;
   // For a weekly event: change just this occurrence, or every week.
   const [scope, setScope] = useState<'this' | 'all'>('this');
+  // A problem the server found with what was entered (see lib/validation.ts).
+  const [error, setError] = useState('');
+  const close = () => {
+    setError('');
+    onClose();
+  };
 
   return (
-    <Dialog open={open} onClose={onClose} labelledBy={headingId}>
+    <Dialog open={open} onClose={close} labelledBy={headingId}>
       <h2 id={headingId} className="mb-4 font-display text-lg font-semibold">
         Edit event
       </h2>
       <form
         action={async (formData) => {
-          await updateCommitment(formData);
-          onClose();
+          const problem = await updateCommitment(formData);
+          setError(problem ?? '');
+          if (!problem) close();
         }}
         className="flex flex-col gap-3"
       >
@@ -144,10 +151,16 @@ export function EditCommitmentDialog({
           </label>
         )}
 
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
+
         <div className="mt-2 flex justify-end gap-2">
           <button
             type="button"
-            onClick={() => onClose()}
+            onClick={() => close()}
             className={buttonSecondary}
           >
             Cancel

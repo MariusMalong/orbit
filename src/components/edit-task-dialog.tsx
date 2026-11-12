@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Dialog } from '@/components/dialog';
 import { updateTask } from '@/app/actions/task';
 import { formatForDateTimeInput } from '@/lib/format';
@@ -28,16 +29,23 @@ interface EditTaskProps {
 /** The edit form for a task, in a modal dialog. The caller decides when it's open. */
 export function EditTaskDialog({ task, open, onClose }: EditTaskProps) {
   const headingId = `edit-task-heading-${task.id}`;
+  // A problem the server found with what was entered (see lib/validation.ts).
+  const [error, setError] = useState('');
+  const close = () => {
+    setError('');
+    onClose();
+  };
 
   return (
-    <Dialog open={open} onClose={onClose} labelledBy={headingId}>
+    <Dialog open={open} onClose={close} labelledBy={headingId}>
       <h2 id={headingId} className="mb-4 font-display text-lg font-semibold">
         Edit task
       </h2>
       <form
         action={async (formData) => {
-          await updateTask(formData);
-          onClose();
+          const problem = await updateTask(formData);
+          setError(problem ?? '');
+          if (!problem) close();
         }}
         className="flex flex-col gap-3"
       >
@@ -134,10 +142,16 @@ export function EditTaskDialog({ task, open, onClose }: EditTaskProps) {
           />
         </label>
 
+        {error && (
+          <p role="alert" className="text-sm text-danger">
+            {error}
+          </p>
+        )}
+
         <div className="mt-2 flex justify-end gap-2">
           <button
             type="button"
-            onClick={() => onClose()}
+            onClick={() => close()}
             className={buttonSecondary}
           >
             Cancel

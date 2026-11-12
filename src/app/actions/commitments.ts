@@ -6,22 +6,33 @@ import { revalidatePath } from 'next/cache';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
 import { parseDateTimeLocal } from '@/lib/time/zoned';
 import { addSkippedStart, moveSeries } from '@/lib/planning/recurrence';
+import { checkEventTimes, parseTitle } from '@/lib/validation';
 
 // datetime-local inputs send a wall-clock time with no timezone, like
 // "2026-11-06T12:30". It means 12:30 for the visitor, not for the server.
-async function readTimeRange(formData: FormData, timeZone: string) {
+// Returns the event's title and times, or an error message for the form.
+function readEventFields(
+  formData: FormData,
+  timeZone: string
+): { title: string; startTime: Date; endTime: Date } | { error: string } {
+  const title = parseTitle(formData.get('title'));
+  if ('error' in title) return title;
   const startTime = parseDateTimeLocal(
-    formData.get('startTime') as string,
+    String(formData.get('startTime') ?? ''),
     timeZone
   );
   const endTime = parseDateTimeLocal(
-    formData.get('endTime') as string,
+    String(formData.get('endTime') ?? ''),
     timeZone
   );
-  if (!startTime || !endTime) {
-    throw new Error('Invalid start or end time.');
-  }
-  return { startTime, endTime };
+  if (!startTime || !endTime) return { error: 'Choose a start and an end.' };
+  return (
+    checkEventTimes(startTime, endTime) ?? {
+      title: title.value,
+      startTime,
+      endTime,
+    }
+  );
 }
 
 // Which events a change to a weekly event applies to: just the occurrence
@@ -49,12 +60,16 @@ async function requireUserId() {
   return session.user.id;
 }
 
-export async function addCommitment(formData: FormData) {
+/** Adds an event. Returns an error message, or null when it's saved. */
+export async function addCommitment(
+  formData: FormData
+): Promise<string | null> {
   const userId = await requireUserId();
   const timeZone = await getUserTimeZone();
 
-  const title = formData.get('title') as string;
-  const { startTime, endTime } = await readTimeRange(formData, timeZone);
+  const fields = readEventFields(formData, timeZone);
+  if ('error' in fields) return fields.error;
+  const { title, startTime, endTime } = fields;
 
   await prisma.fixedCommitment.create({
     data: {
@@ -67,6 +82,7 @@ export async function addCommitment(formData: FormData) {
   });
 
   revalidatePath('/', 'layout');
+  return null;
 }
 
 /**
@@ -108,21 +124,25 @@ export async function deleteCommitment(formData: FormData) {
  *   new details takes its place;
  * - "all": every week moves by the same change (see moveSeries), or, if
  *   "Repeats every week" was unticked, it becomes a single one-off event.
+ * Returns an error message, or null when it's saved.
  */
-export async function updateCommitment(formData: FormData) {
+export async function updateCommitment(
+  formData: FormData
+): Promise<string | null> {
   const userId = await requireUserId();
   const timeZone = await getUserTimeZone();
 
   const commitmentId = formData.get('commitmentId') as string;
-  const title = formData.get('title') as string;
-  const { startTime, endTime } = await readTimeRange(formData, timeZone);
+  const fields = readEventFields(formData, timeZone);
+  if ('error' in fields) return fields.error;
+  const { title, startTime, endTime } = fields;
   const repeatsWeekly = formData.get('repeatsWeekly') === 'on';
   const { scope, occurrenceStart } = readScope(formData);
 
   const event = await prisma.fixedCommitment.findFirst({
     where: { id: commitmentId, userId }, // Strict data isolation
   });
-  if (!event) return;
+  if (!event) return null;
 
   if (!event.repeatsWeekly || !occurrenceStart) {
     await prisma.fixedCommitment.update({
@@ -169,4 +189,5 @@ export async function updateCommitment(formData: FormData) {
   }
 
   revalidatePath('/', 'layout');
+  return null;
 }
