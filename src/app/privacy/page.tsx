@@ -108,6 +108,10 @@ export default function PrivacyPage() {
           them are deleted automatically within a day after that.
         </p>
         <p>
+          When you delete a task, it&apos;s kept for a day so you can undo it,
+          then deleted for good.
+        </p>
+        <p>
           The Account page also has a <strong>Download my data</strong> button,
           which gives you a copy of everything you&apos;ve added as a JSON file.
         </p>

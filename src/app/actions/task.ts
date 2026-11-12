@@ -75,15 +75,67 @@ export async function deleteTask(formData: FormData) {
   // 2. Extract the Task ID from the frontend form
   const taskId = formData.get('taskId') as string;
 
-  // 3. Securely delete the task
-  await prisma.task.deleteMany({
+  // A timer running on it stops first, so its time is logged.
+  await stopFocusFor(session.user.id, taskId);
+
+  // 3. Securely delete the task. It's only marked deleted, so it can be
+  // undone for a while; the daily cleanup job deletes it for good after a
+  // day (see lib/cleanup.ts).
+  await prisma.task.updateMany({
     where: {
       id: taskId,
       userId: session.user.id, // Only delete tasks owned by this user
+      deletedAt: null,
     },
+    data: { deletedAt: new Date() },
   });
 
   // 4. Refresh the dashboard
+  revalidatePath('/', 'layout');
+}
+
+/** Undo for Delete: brings back a task deleted in the last day. */
+export async function restoreTask(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  await prisma.task.updateMany({
+    where: {
+      id: formData.get('taskId') as string,
+      userId: session.user.id,
+      deletedAt: { not: null },
+    },
+    data: { deletedAt: null },
+  });
+  revalidatePath('/', 'layout');
+}
+
+/**
+ * Undo for Mark as done: the task is open again, in progress if time has
+ * been logged on it.
+ */
+export async function reopenTask(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const task = await prisma.task.findFirst({
+    where: {
+      id: formData.get('taskId') as string,
+      userId: session.user.id,
+      status: 'COMPLETED',
+      deletedAt: null,
+    },
+    select: { id: true, _count: { select: { timeEntries: true } } },
+  });
+  if (!task) return;
+
+  await prisma.task.update({
+    where: { id: task.id },
+    data: {
+      status: task._count.timeEntries > 0 ? 'IN_PROGRESS' : 'TODO',
+      completedAt: null,
+    },
+  });
   revalidatePath('/', 'layout');
 }
 

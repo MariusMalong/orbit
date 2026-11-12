@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { completeTask } from '@/app/actions/task';
+import { completeWithUndo } from '@/components/undo-toast';
 import { EditTaskDialog } from '@/components/edit-task-dialog';
 
 export interface LateTask {
@@ -86,9 +86,7 @@ function LateTaskRow({ task }: { task: LateTask }) {
           disabled={isPending}
           onClick={() =>
             startTransition(async () => {
-              const formData = new FormData();
-              formData.set('taskId', task.id);
-              await completeTask(formData);
+              await completeWithUndo(task);
             })
           }
           className={action}

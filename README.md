@@ -100,7 +100,7 @@ The live site runs on Vercel and deploys every push to `main`. The build runs `p
 
 Pull requests get their own Vercel preview URL, and `main` is protected: a pull request can only be merged once CI passes.
 
-A Vercel Cron job (`vercel.json`) calls `/api/cron/cleanup-demos` every day at 04:00 UTC to delete demo accounts whose 24 hours are up, even when nobody starts a new demo. It needs a `CRON_SECRET` environment variable in the Vercel project, which Vercel sends with each call; without it the route turns every call down.
+A Vercel Cron job (`vercel.json`) calls `/api/cron/daily-cleanup` every day at 04:00 UTC. It deletes demo accounts whose 24 hours are up, even when nobody starts a new demo, and purges tasks deleted more than a day ago (Delete only marks a task, so it can be undone). It needs a `CRON_SECRET` environment variable in the Vercel project, which Vercel sends with each call; without it the route turns every call down.
 
 ## Project layout
 

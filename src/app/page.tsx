@@ -107,7 +107,7 @@ export default async function Home({
     // parent Task relation. Only entries on this user's tasks can match.
     prisma.timeEntry.findMany({
       where: {
-        task: { userId: session.user.id },
+        task: { userId: session.user.id, deletedAt: null },
         startTime: { gte: startOfToday, lt: startOfTomorrow },
       },
       select: { duration: true },
@@ -115,6 +115,7 @@ export default async function Home({
     prisma.task.count({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         status: 'COMPLETED',
         completedAt: { gte: startOfToday, lt: startOfTomorrow },
       },

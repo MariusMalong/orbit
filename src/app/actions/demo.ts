@@ -11,7 +11,7 @@ import {
   DEMO_LIMIT_WINDOW_MS,
   demoLimitReached,
 } from '@/lib/demo/limits';
-import { deleteExpiredDemos } from '@/lib/demo/cleanup';
+import { deleteExpiredDemos } from '@/lib/cleanup';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
 
 /**

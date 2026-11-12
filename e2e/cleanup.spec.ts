@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import { prisma } from './db';
 
-// The daily cron job that deletes expired demo accounts. Vercel calls it with
+// The daily cron job that deletes expired demo accounts and purges tasks
+// deleted more than a day ago. Vercel calls it with
 // the project's CRON_SECRET; nobody else can.
 
-const PATH = '/api/cron/cleanup-demos';
+const PATH = '/api/cron/daily-cleanup';
 
 function demoUser(hoursOld: number) {
   return prisma.user.create({
@@ -39,7 +40,7 @@ test('deletes demo accounts older than 24 hours, and only those', async ({
       headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
     });
     expect(response.status()).toBe(200);
-    expect((await response.json()).deleted).toBeGreaterThanOrEqual(1);
+    expect((await response.json()).deleted.demos).toBeGreaterThanOrEqual(1);
 
     expect(
       await prisma.user.findUnique({ where: { id: expired.id } })
@@ -53,5 +54,38 @@ test('deletes demo accounts older than 24 hours, and only those', async ({
     await prisma.user.deleteMany({
       where: { id: { in: [expired.id, fresh.id] } },
     });
+  }
+});
+
+test('purges tasks deleted more than a day ago, and only those', async ({
+  request,
+}) => {
+  const user = await demoUser(1);
+  const day = 24 * 60 * 60 * 1000;
+  const [old, recent] = await Promise.all(
+    [25, 2].map((hours) =>
+      prisma.task.create({
+        data: {
+          userId: user.id,
+          title: `Deleted ${hours}h ago`,
+          durationEstimate: 30,
+          priority: 2,
+          deletedAt: new Date(Date.now() - (hours / 24) * day),
+        },
+      })
+    )
+  );
+  try {
+    const response = await request.get(PATH, {
+      headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+    });
+    expect(response.status()).toBe(200);
+    expect(await prisma.task.findUnique({ where: { id: old.id } })).toBeNull();
+    // Still within the day it can be undone in.
+    expect(
+      await prisma.task.findUnique({ where: { id: recent.id } })
+    ).not.toBeNull();
+  } finally {
+    await prisma.user.delete({ where: { id: user.id } });
   }
 });

@@ -22,7 +22,12 @@ export async function startFocus(formData: FormData) {
   const userId = await requireUserId();
   const taskId = formData.get('taskId') as string;
   const task = await prisma.task.findFirst({
-    where: { id: taskId, userId, status: { not: 'COMPLETED' } },
+    where: {
+      id: taskId,
+      userId,
+      status: { not: 'COMPLETED' },
+      deletedAt: null,
+    },
     select: { id: true },
   });
   if (!task) throw new Error('Task not found.');

@@ -1,8 +1,9 @@
 import { timingSafeEqual } from 'node:crypto';
-import { deleteExpiredDemos } from '@/lib/demo/cleanup';
+import { deleteExpiredDemos, purgeDeletedTasks } from '@/lib/cleanup';
 
-// Called once a day by Vercel Cron (see vercel.json), so expired demo
-// accounts are deleted even when nobody starts a new demo. Vercel sends the
+// Called once a day by Vercel Cron (see vercel.json): deletes expired demo
+// accounts (even when nobody starts a new demo), and purges tasks deleted
+// more than a day ago. Vercel sends the
 // project's CRON_SECRET as a bearer token; anyone else gets a 401. Without a
 // CRON_SECRET set, the route refuses everything.
 
@@ -19,6 +20,9 @@ export async function GET(request: Request) {
   if (!isAuthorized(request)) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const deleted = await deleteExpiredDemos();
-  return Response.json({ deleted });
+  const [demos, tasks] = await Promise.all([
+    deleteExpiredDemos(),
+    purgeDeletedTasks(),
+  ]);
+  return Response.json({ deleted: { demos, tasks } });
 }
