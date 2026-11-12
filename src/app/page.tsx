@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { Timeline } from '@/components/timeline';
 import { WorkingHours } from '@/components/working-hours';
 import { ComingUp } from '@/components/coming-up';
+import { AutoRefresh } from '@/components/auto-refresh';
 import { DayStats } from '@/components/day-stats';
 import { QuickAdd } from '@/components/quick-add';
 import { FocusProvider } from '@/components/focus-context';
@@ -190,6 +191,7 @@ export default async function Home({
           }
         }
       >
+        <AutoRefresh />
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-3">
             <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">

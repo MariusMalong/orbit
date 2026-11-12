@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
+import { AutoRefresh } from '@/components/auto-refresh';
 import { QuickAdd } from '@/components/quick-add';
 import { WeekBoard } from '@/components/week-board';
 import { WorkingHours } from '@/components/working-hours';
@@ -105,6 +106,7 @@ export default async function WeekPage() {
 
   return (
     <ProjectsProvider projects={projects}>
+      <AutoRefresh />
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>

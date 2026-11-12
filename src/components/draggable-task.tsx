@@ -149,6 +149,7 @@ function useDragToPlace({
       dragging.current = true;
       setIsLifted(true);
       document.body.style.userSelect = 'none';
+      document.body.dataset.dragging = ''; // AutoRefresh waits for the drop
       band = visibleBand();
       update();
       frame = requestAnimationFrame(autoScroll);
@@ -223,6 +224,7 @@ function useDragToPlace({
       window.removeEventListener('keydown', key);
       window.removeEventListener('contextmenu', contextMenu);
       document.body.style.userSelect = '';
+      delete document.body.dataset.dragging;
       dragging.current = false;
       setIsLifted(false);
       cleanup.current = () => {};
