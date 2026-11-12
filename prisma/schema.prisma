@@ -17,7 +17,6 @@ model User {
   email          String            @unique
   emailVerified  DateTime?
   image          String?
-  passwordHash   String?           // Made optional for OAuth users
   accounts       Account[]
   sessions       Session[]
   tasks          Task[]
