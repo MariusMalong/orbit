@@ -6,7 +6,7 @@ export const metadata: Metadata = {
 };
 
 const CONTACT_EMAIL = 'mariusmalong@gmail.com';
-const LAST_UPDATED = '8 November 2026';
+const LAST_UPDATED = '13 November 2026';
 
 // Public: Google's OAuth consent screen links here, so it must load without
 // signing in. Keep it in step with what the app actually stores (see
@@ -104,8 +104,12 @@ export default function PrivacyPage() {
           yourself at any time from the{' '}
           <Link href="/account">Account page</Link> (click your name at the top
           of the page): everything is deleted straight away, and nothing is
-          kept. Demo accounts and everything in them are deleted automatically
-          after 24 hours.
+          kept. Demo accounts close after 24 hours, and they and everything in
+          them are deleted automatically within a day after that.
+        </p>
+        <p>
+          When you delete a task, it&apos;s kept for a day so you can undo it,
+          then deleted for good.
         </p>
         <p>
           The Account page also has a <strong>Download my data</strong> button,

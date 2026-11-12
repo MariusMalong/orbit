@@ -70,7 +70,7 @@ export default async function SignInPage({
           </form>
           <p className="text-sm text-muted">
             Opens a temporary account with sample tasks and commitments. No
-            sign-up needed, and it&apos;s deleted after 24 hours.
+            sign-up needed. It closes after 24 hours and is then deleted.
           </p>
         </div>
 

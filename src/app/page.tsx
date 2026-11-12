@@ -4,9 +4,11 @@ import { redirect } from 'next/navigation';
 import { Timeline } from '@/components/timeline';
 import { WorkingHours } from '@/components/working-hours';
 import { ComingUp } from '@/components/coming-up';
+import { AutoRefresh } from '@/components/auto-refresh';
 import { DayStats } from '@/components/day-stats';
 import { QuickAdd } from '@/components/quick-add';
 import { FocusProvider } from '@/components/focus-context';
+import { findRunningFocus } from '@/lib/focus-store';
 import { NowCard, type NowItem } from '@/components/now-card';
 import { TaskList } from '@/components/task-list';
 import { ProjectsProvider } from '@/components/projects-context';
@@ -100,12 +102,12 @@ export default async function Home({
 
   // 4. Analytics: aggregate today's executed time and task completion
 
-  const [todaysEntries, completedTodayCount] = await Promise.all([
+  const [todaysEntries, completedTodayCount, runningFocus] = await Promise.all([
     // TimeEntry has no userId column, so ownership is enforced through the
     // parent Task relation. Only entries on this user's tasks can match.
     prisma.timeEntry.findMany({
       where: {
-        task: { userId: session.user.id },
+        task: { userId: session.user.id, deletedAt: null },
         startTime: { gte: startOfToday, lt: startOfTomorrow },
       },
       select: { duration: true },
@@ -113,10 +115,12 @@ export default async function Home({
     prisma.task.count({
       where: {
         userId: session.user.id,
+        deletedAt: null,
         status: 'COMPLETED',
         completedAt: { gte: startOfToday, lt: startOfTomorrow },
       },
     }),
+    findRunningFocus(session.user.id),
   ]);
 
   const summary = summarizeDay({
@@ -180,7 +184,15 @@ export default async function Home({
 
   return (
     <ProjectsProvider projects={projects}>
-      <FocusProvider>
+      <FocusProvider
+        running={
+          runningFocus && {
+            taskId: runningFocus.taskId,
+            startedAt: runningFocus.startTime,
+          }
+        }
+      >
+        <AutoRefresh />
         <div className="flex flex-col gap-5">
           <div className="flex flex-col gap-3">
             <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
@@ -190,7 +202,7 @@ export default async function Home({
             {session.user.isDemo && (
               <p className="text-sm text-muted">
                 You&apos;re in a demo account filled with sample data. Change
-                anything you like: it&apos;s deleted after 24 hours.
+                anything you like: it closes after 24 hours and is then deleted.
               </p>
             )}
           </div>

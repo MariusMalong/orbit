@@ -1,4 +1,4 @@
-import { completeTask } from '@/app/actions/task';
+import { DoneButton } from '@/components/undo-toast';
 import { EmptyState } from '@/components/empty-state';
 import { projectDot, type ProjectInfo } from '@/lib/projects';
 import { FocusTimer } from '@/components/focus-timer';
@@ -121,15 +121,10 @@ export function NowCard({
                   size="large"
                 />
               </div>
-              <form action={completeTask}>
-                <input type="hidden" name="taskId" value={current.task.id} />
-                <button
-                  type="submit"
-                  className={`${buttonSecondary} min-h-13 cursor-pointer px-5`}
-                >
-                  Done
-                </button>
-              </form>
+              <DoneButton
+                task={current.task}
+                className={`${buttonSecondary} min-h-13 cursor-pointer px-5`}
+              />
             </div>
           </>
         ) : (

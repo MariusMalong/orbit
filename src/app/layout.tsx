@@ -6,6 +6,7 @@ import './globals.css';
 import { HeaderAccount } from '@/components/header-account';
 import { MainNav, TabBar } from '@/components/main-nav';
 import { TimezoneSync } from '@/components/timezone-sync';
+import { UndoToast } from '@/components/undo-toast';
 import { parseTheme, THEME_COOKIE } from '@/lib/theme';
 
 // Exposed as CSS variables and mapped to font-sans / font-display in globals.css.
@@ -86,6 +87,7 @@ export default async function RootLayout({
           </Link>
         </footer>
         <TabBar />
+        <UndoToast />
       </body>
     </html>
   );

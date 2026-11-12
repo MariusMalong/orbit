@@ -17,7 +17,6 @@ model User {
   email          String            @unique
   emailVerified  DateTime?
   image          String?
-  passwordHash   String?           // Made optional for OAuth users
   accounts       Account[]
   sessions       Session[]
   tasks          Task[]
@@ -97,6 +96,7 @@ model Task {
   plannedStart     DateTime?       // Set when the user places the task at a time; null lets Orbit plan it
   status           TaskStatus      @default(TODO)
   completedAt      DateTime?       // When the task was marked done
+  deletedAt        DateTime?       // Deleted, but kept for a day so it can be undone; then purged
   
   scheduleBlocks   ScheduleBlock[]
   timeEntries      TimeEntry[]

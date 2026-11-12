@@ -10,8 +10,8 @@ import {
   DEMO_LIFETIME_MS,
   DEMO_LIMIT_WINDOW_MS,
   demoLimitReached,
-  expiredDemoUsers,
 } from '@/lib/demo/limits';
+import { deleteExpiredDemos } from '@/lib/cleanup';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
 
 /**
@@ -26,9 +26,9 @@ import { getUserTimeZone } from '@/lib/time/user-timezone';
 export async function startDemo() {
   const now = new Date();
 
-  // Clean up demo accounts older than a day. Deleting the user cascades to
-  // their tasks, commitments, time entries and sessions.
-  await prisma.user.deleteMany({ where: expiredDemoUsers(now) });
+  // Clean up demo accounts older than a day. (A daily cron job does this too,
+  // for when nobody starts a demo.)
+  await deleteExpiredDemos(now);
 
   // Rate limit: per visitor (by a keyed hash of their IP, so the address
   // itself is never stored) and overall. Over a limit, the sign-in page

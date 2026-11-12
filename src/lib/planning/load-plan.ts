@@ -36,7 +36,11 @@ export async function loadPlan(userId: string) {
       // IN_PROGRESS tasks (partially worked via the focus timer) still have
       // time left, so they're planned alongside untouched TODO tasks.
       prisma.task.findMany({
-        where: { userId, status: { in: ['TODO', 'IN_PROGRESS'] } },
+        where: {
+          userId,
+          status: { in: ['TODO', 'IN_PROGRESS'] },
+          deletedAt: null, // Deleted, waiting a day in case of Undo
+        },
         orderBy: { createdAt: 'desc' },
       }),
       // Weekly events (which may have started long ago) and events that

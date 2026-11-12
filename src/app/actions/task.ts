@@ -5,24 +5,19 @@ import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
 import { getUserTimeZone } from '@/lib/time/user-timezone';
 import { parseDateTimeLocal } from '@/lib/time/zoned';
+import { stopFocusFor } from '@/lib/focus-store';
+import { parseTaskFields } from '@/lib/validation';
 
-// The optional "Due" field: empty means no deadline. Like commitments, the
-// datetime-local value is a wall-clock time in the visitor's timezone.
-async function readDeadline(formData: FormData): Promise<Date | null> {
-  const value = (formData.get('deadline') as string | null)?.trim();
+// An optional date and time field, like "Due" or "Start at": empty is null.
+// Like commitments, the datetime-local value is a wall-clock time in the
+// visitor's timezone. Undefined means it couldn't be read.
+async function readOptionalTime(
+  formData: FormData,
+  name: string
+): Promise<Date | null | undefined> {
+  const value = (formData.get(name) as string | null)?.trim();
   if (!value) return null;
-  const deadline = parseDateTimeLocal(value, await getUserTimeZone());
-  if (!deadline) throw new Error('Invalid due date.');
-  return deadline;
-}
-
-// The optional "Start at" field: empty lets Orbit plan the task.
-async function readPlannedStart(formData: FormData): Promise<Date | null> {
-  const value = (formData.get('plannedStart') as string | null)?.trim();
-  if (!value) return null;
-  const start = parseDateTimeLocal(value, await getUserTimeZone());
-  if (!start) throw new Error('Invalid start time.');
-  return start;
+  return parseDateTimeLocal(value, await getUserTimeZone()) ?? undefined;
 }
 
 // The optional project. Only one of the user's own projects can be set, so
@@ -40,26 +35,25 @@ async function readProjectId(
   return project?.id ?? null;
 }
 
-export async function createTask(formData: FormData) {
+/** Adds a task. Returns an error message for the form, or null when it's saved. */
+export async function createTask(formData: FormData): Promise<string | null> {
   // 1. Verify the user's identity securely on the server
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error('You must be logged in to create a task.');
   }
 
-  // 2. Extract the values submitted from the frontend form
-  const title = formData.get('title') as string;
-  const durationEstimate = Number(formData.get('durationEstimate'));
-  const priority = Number(formData.get('priority'));
-  const deadline = await readDeadline(formData);
+  // 2. Check the values submitted from the form (see lib/validation.ts)
+  const fields = parseTaskFields(formData);
+  if ('error' in fields) return fields.error;
+  const deadline = await readOptionalTime(formData, 'deadline');
+  if (deadline === undefined) return "The due date isn't a valid date.";
   const projectId = await readProjectId(formData, session.user.id);
 
   // 3. Write the new task to PostgreSQL
   await prisma.task.create({
     data: {
-      title: title,
-      durationEstimate: durationEstimate,
-      priority: priority,
+      ...fields.value,
       deadline,
       projectId,
       userId: session.user.id,
@@ -68,6 +62,7 @@ export async function createTask(formData: FormData) {
 
   // 4. Tell Next.js to refresh the dashboard so the new task appears
   revalidatePath('/', 'layout');
+  return null;
 }
 
 export async function deleteTask(formData: FormData) {
@@ -80,15 +75,67 @@ export async function deleteTask(formData: FormData) {
   // 2. Extract the Task ID from the frontend form
   const taskId = formData.get('taskId') as string;
 
-  // 3. Securely delete the task
-  await prisma.task.deleteMany({
+  // A timer running on it stops first, so its time is logged.
+  await stopFocusFor(session.user.id, taskId);
+
+  // 3. Securely delete the task. It's only marked deleted, so it can be
+  // undone for a while; the daily cleanup job deletes it for good after a
+  // day (see lib/cleanup.ts).
+  await prisma.task.updateMany({
     where: {
       id: taskId,
       userId: session.user.id, // Only delete tasks owned by this user
+      deletedAt: null,
     },
+    data: { deletedAt: new Date() },
   });
 
   // 4. Refresh the dashboard
+  revalidatePath('/', 'layout');
+}
+
+/** Undo for Delete: brings back a task deleted in the last day. */
+export async function restoreTask(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  await prisma.task.updateMany({
+    where: {
+      id: formData.get('taskId') as string,
+      userId: session.user.id,
+      deletedAt: { not: null },
+    },
+    data: { deletedAt: null },
+  });
+  revalidatePath('/', 'layout');
+}
+
+/**
+ * Undo for Mark as done: the task is open again, in progress if time has
+ * been logged on it.
+ */
+export async function reopenTask(formData: FormData) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const task = await prisma.task.findFirst({
+    where: {
+      id: formData.get('taskId') as string,
+      userId: session.user.id,
+      status: 'COMPLETED',
+      deletedAt: null,
+    },
+    select: { id: true, _count: { select: { timeEntries: true } } },
+  });
+  if (!task) return;
+
+  await prisma.task.update({
+    where: { id: task.id },
+    data: {
+      status: task._count.timeEntries > 0 ? 'IN_PROGRESS' : 'TODO',
+      completedAt: null,
+    },
+  });
   revalidatePath('/', 'layout');
 }
 
@@ -101,6 +148,9 @@ export async function completeTask(formData: FormData) {
 
   // 2. Extract Task ID
   const taskId = formData.get('taskId') as string;
+
+  // A timer running on it stops, and the time so far is logged.
+  await stopFocusFor(session.user.id, taskId);
 
   // 3. Securely update the task status
   await prisma.task.updateMany({
@@ -118,21 +168,21 @@ export async function completeTask(formData: FormData) {
   revalidatePath('/', 'layout');
 }
 
-export async function updateTask(formData: FormData) {
+/** Saves the edit form. Returns an error message, or null when it's saved. */
+export async function updateTask(formData: FormData): Promise<string | null> {
   const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
   const taskId = formData.get('taskId') as string;
-  const title = formData.get('title') as string;
-  const durationEstimate = parseInt(
-    formData.get('durationEstimate') as string,
-    10
-  );
-  const priority = parseInt(formData.get('priority') as string, 10);
-  const deadline = await readDeadline(formData);
-  const plannedStart = await readPlannedStart(formData);
+  const fields = parseTaskFields(formData);
+  if ('error' in fields) return fields.error;
+  const deadline = await readOptionalTime(formData, 'deadline');
+  if (deadline === undefined) return "The due date isn't a valid date.";
+  // The optional "Start at" field: empty lets Orbit plan the task.
+  const plannedStart = await readOptionalTime(formData, 'plannedStart');
+  if (plannedStart === undefined) return "The start time isn't valid.";
   const projectId = await readProjectId(formData, session.user.id);
 
   await prisma.task.updateMany({
@@ -140,17 +190,11 @@ export async function updateTask(formData: FormData) {
       id: taskId,
       userId: session.user.id, // Strict data isolation
     },
-    data: {
-      title,
-      durationEstimate,
-      priority,
-      deadline,
-      plannedStart,
-      projectId,
-    },
+    data: { ...fields.value, deadline, plannedStart, projectId },
   });
 
   revalidatePath('/', 'layout');
+  return null;
 }
 
 /**

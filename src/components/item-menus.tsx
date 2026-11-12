@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { completeTask, deleteTask, placeTask } from '@/app/actions/task';
+import { placeTask } from '@/app/actions/task';
+import { completeWithUndo, deleteWithUndo } from '@/components/undo-toast';
 import { deleteCommitment } from '@/app/actions/commitments';
 import { EditTaskDialog } from '@/components/edit-task-dialog';
 import { EditCommitmentDialog } from '@/components/edit-commitment-dialog';
@@ -56,10 +57,17 @@ export function TaskMenu({ task, heading, ...layout }: TaskMenuProps) {
             Let Orbit plan it
           </MenuButton>
         )}
-        <MenuButton onClick={() => run(completeTask)} disabled={isPending}>
+        <MenuButton
+          onClick={() => startTransition(() => completeWithUndo(task))}
+          disabled={isPending}
+        >
           Mark as done
         </MenuButton>
-        <MenuButton onClick={() => run(deleteTask)} disabled={isPending} danger>
+        <MenuButton
+          onClick={() => startTransition(() => deleteWithUndo(task))}
+          disabled={isPending}
+          danger
+        >
           Delete
         </MenuButton>
       </Popover>

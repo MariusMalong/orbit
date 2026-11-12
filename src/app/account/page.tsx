@@ -53,7 +53,7 @@ export default async function AccountPage() {
           <dt className="text-muted">Signs in with</dt>
           <dd>
             {user.isDemo
-              ? 'Demo account, deleted automatically after 24 hours'
+              ? 'Demo account: it closes after 24 hours and is then deleted'
               : providers.join(' and ') || '—'}
           </dd>
         </dl>

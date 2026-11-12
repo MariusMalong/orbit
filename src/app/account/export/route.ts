@@ -44,7 +44,9 @@ export async function GET() {
         select: { id: true, name: true, color: true },
       }),
       prisma.task.findMany({
-        where: { userId },
+        // Deleted tasks wait a day in case of Undo, then go for good; they're
+        // not part of the copy.
+        where: { userId, deletedAt: null },
         orderBy: { createdAt: 'asc' },
         select: {
           id: true,

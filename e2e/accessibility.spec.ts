@@ -205,6 +205,23 @@ for (const colorScheme of ['light', 'dark'] as const) {
       }
     });
 
+    test('the Undo message after marking a task done', async ({ page }) => {
+      await startDemo(page);
+      await page
+        .getByRole('button', { name: /^More for / })
+        .first()
+        .click();
+      await page
+        .getByRole('button', { name: 'Mark as done', exact: true })
+        .click();
+      await expect(
+        page.getByRole('status', { name: 'Undo' }).getByRole('button', {
+          name: 'Undo',
+        })
+      ).toBeVisible();
+      await expectAccessible(page);
+    });
+
     test('welcome page', async ({ page, context, baseURL }) => {
       const userId = await signInAsNewUser(context, baseURL!);
       try {

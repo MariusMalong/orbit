@@ -228,7 +228,8 @@ function QuickAddForm({
   async function submit(formData: FormData) {
     setError('');
     if (mode === 'task') {
-      await createTask(formData);
+      const problem = await createTask(formData);
+      if (problem) return setError(problem);
       setShowDue(false);
     } else {
       if (!isAfter(event.end, event.start)) {
@@ -237,7 +238,8 @@ function QuickAddForm({
       }
       formData.set('startTime', `${event.date}T${event.start}`);
       formData.set('endTime', `${event.date}T${event.end}`);
-      await addCommitment(formData);
+      const problem = await addCommitment(formData);
+      if (problem) return setError(problem);
     }
     setTitle('');
     if (onAdded) onAdded();
